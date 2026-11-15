@@ -311,6 +311,10 @@
       "types": "./src/state/sharedSettings.ts",
       "default": "./src/state/sharedSettings.ts"
     },
+    "./state/sidebar-spaces": {
+      "types": "./src/state/sidebarSpaces.ts",
+      "default": "./src/state/sidebarSpaces.ts"
+    },
     "./state/shell": {
       "types": "./src/state/shell.ts",
       "default": "./src/state/shell.ts"
