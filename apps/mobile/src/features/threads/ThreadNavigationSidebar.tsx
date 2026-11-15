@@ -167,11 +167,6 @@ function ThreadNavigationSidebarPane(props: ThreadNavigationSidebarProps) {
     setSelectedProjectKey: setProjectKeyKeepingSpace,
   } = useHomeListOptions(availableEnvironmentIds);
   const setSelectedProjectKey = useSpaceDetachingProjectKeySetter(setProjectKeyKeepingSpace);
-  const activeSpace = useActiveSpaceHomeScope({
-    projects,
-    projectGroupingMode: options.projectGroupingMode,
-    selectedProjectKey: options.selectedProjectKey,
-  });
   const searchEnvironmentIds =
     options.selectedEnvironmentId === null
       ? workspaceEnvironments
@@ -221,6 +216,11 @@ function ThreadNavigationSidebarPane(props: ThreadNavigationSidebarProps) {
   // An archived project's filter reads as all projects, matching the filter menu.
   const manualProjectScope =
     pickableProjectGroups(projectScopes).find((scope) => scope.key === resolvedProjectKey) ?? null;
+  const activeSpace = useActiveSpaceHomeScope({
+    projects,
+    projectGroupingMode: options.projectGroupingMode,
+    selectedProjectKey: manualProjectScope?.key ?? null,
+  });
   const selectedProjectScope = activeSpace.list ? activeSpace.list.scope : manualProjectScope;
   const threadSearch = useThreadSearch(
     searchEnvironmentIds,
