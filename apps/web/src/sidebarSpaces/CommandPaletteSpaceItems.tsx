@@ -1,3 +1,4 @@
+import { scrollSidebarListToTop } from "./scrollSidebarListToTop";
 import {
   findSidebarSpace,
   resolveSidebarSpaceScope,
@@ -19,7 +20,7 @@ import {
 import { useSidebarProjectGroups } from "../hooks/useSidebarProjectGroups";
 import { useDelegatedUnderParent, useQuietThreadShells } from "../state/entities";
 import { useEnvironmentIdentities } from "../state/environments";
-import { useUiStateStore } from "../uiStateStore";
+import { useResolvedManualSidebarScopeKeys } from "./useSidebarSpaceScopeKeys";
 import { openSidebarSpaceEditor } from "./editorStore";
 import { SidebarSpaceGlyph } from "./SidebarSpaceGlyph";
 import {
@@ -36,8 +37,9 @@ export function useCommandPaletteSpaceItems(): ReadonlyArray<
   const enabled = useSidebarSpacesEnabled();
   const spaces = useSidebarSpaces();
   const activeSpaceKey = useActiveSidebarSpaceKey();
-  const manualKeys = useUiStateStore((state) => state.sidebarProjectScopeKeys);
-  const groups = sidebarSpaceGroupsOf(useSidebarProjectGroups());
+  const projectGroups = useSidebarProjectGroups();
+  const manualKeys = useResolvedManualSidebarScopeKeys(projectGroups);
+  const groups = sidebarSpaceGroupsOf(projectGroups);
   const threads = useQuietThreadShells();
   const delegated = useDelegatedUnderParent();
   const environments = useEnvironmentIdentities();
@@ -82,6 +84,7 @@ export function useCommandPaletteSpaceItems(): ReadonlyArray<
               shortcutCommand: "sidebar.space.all",
               run: async () => {
                 activateSidebarSpace(null);
+                scrollSidebarListToTop();
               },
             },
             ...spaces.map((space, index): CommandPaletteActionItem => ({
@@ -119,6 +122,7 @@ export function useCommandPaletteSpaceItems(): ReadonlyArray<
               ),
               run: async () => {
                 activateSidebarSpace(space.key);
+                scrollSidebarListToTop();
               },
             })),
           ],

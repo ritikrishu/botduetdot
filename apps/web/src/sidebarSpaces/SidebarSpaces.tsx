@@ -26,6 +26,7 @@ import {
 import { useEnvironmentIdentities } from "../state/environments";
 import { primaryServerKeybindingsAtom } from "../state/server";
 import { openSidebarSpaceEditor } from "./editorStore";
+import { scrollSidebarListToTop } from "./scrollSidebarListToTop";
 import { SidebarSpaceGlyph } from "./SidebarSpaceGlyph";
 import {
   activateSidebarSpace,
@@ -50,13 +51,9 @@ function SpaceChip({ dimmed, ...props }: ComponentProps<"button"> & { dimmed?: b
   );
 }
 
-function selectSpace(spaceKey: string | null, trigger: HTMLElement) {
+function selectSpace(spaceKey: string | null) {
   activateSidebarSpace(spaceKey);
-  trigger
-    .closest('[data-sidebar="sidebar"]')
-    ?.querySelector('[data-slot="sidebar-content"]')
-    ?.closest("[data-slot=scroll-area-viewport]")
-    ?.scrollTo({ top: 0 });
+  scrollSidebarListToTop();
 }
 
 function SidebarSpacesStrip(props: {
@@ -145,7 +142,7 @@ function SidebarSpacesStrip(props: {
             <SpaceChip
               aria-label="All projects"
               aria-pressed={scope.selection.kind === "all"}
-              onClick={(event) => selectSpace(null, event.currentTarget)}
+              onClick={() => selectSpace(null)}
             />
           }
         >
@@ -170,10 +167,18 @@ function SidebarSpacesStrip(props: {
             <TooltipTrigger
               render={
                 <SpaceChip
-                  aria-label={`${space.space.name}${needsYou ? ", needs you" : ""}`}
+                  aria-label={`${space.space.name}${needsYou ? ", needs you" : ""}${dimmed && snapshotsReady ? ", not connected" : ""}`}
                   aria-pressed={selected}
                   dimmed={dimmed}
-                  onClick={(event) => selectSpace(space.key, event.currentTarget)}
+                  onClick={() => selectSpace(space.key)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10"))
+                      return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    void showSpaceMenu(space, { x: rect.left, y: rect.bottom });
+                  }}
                   onContextMenu={(event) => {
                     event.preventDefault();
                     void showSpaceMenu(space, { x: event.clientX, y: event.clientY });

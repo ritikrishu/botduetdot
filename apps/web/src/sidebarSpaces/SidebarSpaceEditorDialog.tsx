@@ -69,6 +69,11 @@ function SpaceEditorForm({
   const editable = home !== null && writer.canEdit(home);
   const [name, setName] = useState(existing?.space.name ?? "");
   const [icon, setIcon] = useState(existing?.space.icon ?? "lucide:folder");
+  const [lucideIcon, setLucideIcon] = useState(
+    existing?.space.icon.startsWith("lucide:") ? existing.space.icon : "lucide:folder",
+  );
+  const homeSpaces = spaces.filter((space) => space.homeEnvironmentId === home);
+  const homeIndex = homeSpaces.findIndex((space) => space.key === existing?.key);
   const [selectionChanges, setSelectionChanges] = useState<ReadonlyMap<string, boolean>>(
     () => new Map(),
   );
@@ -119,6 +124,12 @@ function SpaceEditorForm({
     if (!saved) return;
     if (request.mode === "create") activateSidebarSpace(sidebarSpaceKey(home, spaceId));
     onClose();
+  };
+  const move = async (direction: -1 | 1) => {
+    if (existing === null || !editable || busy) return;
+    setBusy(true);
+    await writer.move(existing.key, direction).catch(() => false);
+    setBusy(false);
   };
   const remove = async () => {
     if (existing === null || !editable || busy) return;
@@ -190,7 +201,7 @@ function SpaceEditorForm({
                         (part) => part.segment,
                       )
                         .slice(0, 2)
-                        .join(""),
+                        .join("") || lucideIcon,
                     )
                   }
                 />
@@ -208,13 +219,36 @@ function SpaceEditorForm({
                       aria-label={key.replaceAll("-", " ")}
                       aria-pressed={icon === `lucide:${key}`}
                       disabled={!editable || busy}
-                      onClick={() => setIcon(`lucide:${key}`)}
+                      onClick={() => {
+                        setIcon(`lucide:${key}`);
+                        setLucideIcon(`lucide:${key}`);
+                      }}
                     >
                       <Icon />
                     </Button>
                   ))}
                 </div>
               </div>
+              {existing !== null ? (
+                <div role="group" aria-label="Space order" className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!editable || busy || homeIndex <= 0}
+                    onClick={() => void move(-1)}
+                  >
+                    Move left
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={!editable || busy || homeIndex === homeSpaces.length - 1}
+                    onClick={() => void move(1)}
+                  >
+                    Move right
+                  </Button>
+                </div>
+              ) : null}
               <fieldset disabled={!editable || busy} className="flex flex-col gap-2">
                 <legend className="mb-2 text-sm font-medium">Projects</legend>
                 <div className="flex max-h-60 flex-col gap-2 overflow-y-auto">

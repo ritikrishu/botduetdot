@@ -1,3 +1,4 @@
+import { scrollSidebarListToTop } from "./scrollSidebarListToTop";
 import { useEffect } from "react";
 import { SIDEBAR_SPACE_KEYBINDING_COMMANDS } from "@t3tools/contracts";
 import { resolveSidebarSpaceCommand } from "@t3tools/client-runtime/state/sidebar-spaces";
@@ -30,6 +31,7 @@ export function SidebarSpacesHost() {
         event.preventDefault();
         event.stopPropagation();
         activateSidebarSpace(target.spaceKey);
+        scrollSidebarListToTop();
       };
     }
     return registerCommands(handlers);
