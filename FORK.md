@@ -7,6 +7,46 @@ Web and desktop provide a switcher strip, editing, command-palette actions and o
 Definitions live in `ServerSettings.sidebarSpaces` in each environment's `userdata/settings.json`; the active selection is per device.
 With no spaces, the sidebar keeps upstream behavior. The fork changes no server code and adds no database migrations.
 
+## Design decisions and known limits
+
+Server settings are the only existing store every client receives; client settings are local
+and mobile never reads them. Generic settings patches make storage a schema-only addition.
+Keep [persisted decoding](packages/contracts/src/sidebarSpaces.ts) in this order:
+`ForwardCompatibleArray` → `withDecodingDefaultType` → `catchDecoding`. Bad entries must drop
+individually; a missing or malformed field must become `[]`. A field decode failure would
+reset all settings to in-memory defaults. Using `withDecodingDefault` instead rejects mixed
+arrays before individual bad entries can drop, losing valid spaces too.
+
+Identity is `${homeEnvironmentId}:${space.id}`. Each space has one home; clients show the union
+of connected homes, without copying definitions between them or deduplicating across homes.
+Store member refs `environmentId:projectId` plus the scratch sentinel `no-project`, never group
+keys: grouping modes differ per device, and stale group keys can resurrect deselected projects.
+The [shared membership rules](packages/client-runtime/src/state/sidebarSpaces.ts) preserve refs
+for unavailable projects and keep a no-op save in a coarser mode from widening membership.
+A matched group still displays whole; the scratch sentinel includes all scratch projects,
+so it cannot separate bot scratch threads from ad-hoc chats.
+
+A space saves the existing project filter. Manual filter changes detach it; opening a thread
+outside it reveals All. An active space matching nothing is effective All with a dimmed chip,
+including while projects load. Keep its key so it reapplies when projects return, unless the
+user changes the filter. In boring sidebar mode, spaces are inert and manual filtering leaves
+the remembered key intact, avoiding invisible changes before spaces are enabled again.
+Mobile v1 only views and switches spaces; editing would duplicate the web form for a rare action.
+Shortcuts remain unassigned for [official-app compatibility](#compatibility-with-the-official-app).
+
+Known limits and follow-ups:
+
+- Cross-device concurrent edits are last-write-wins for the home environment's whole list.
+- An offline home hides its spaces until reconnect; the stored active key survives meanwhile.
+- Copying `~/.t3` also copies `userdata/environment-id`. Two servers with that id are
+  indistinguishable to space identity; composite keys cannot solve a cloned environment id.
+- The 24-space cap is enforced only by the patch schema, per home. Persisted decoding has no
+  cap, and the UI does not disable creation at the cap; saving a 25th space fails validation.
+- The mobile split-view list on pre-iPadOS 26 iPads and Android tablets/foldables has no spaces
+  bar yet ([ThreadNavigationSidebar.tsx](apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx)).
+- [Packaged daily-use desktop builds](#daily-desktop-use-open-follow-up) still need a verified
+  install/update procedure and independent app identity.
+
 ## Upstream seams
 
 Base release: `v0.1.9`. These are all pre-existing files changed by the fork since that tag; review their diffs on each upgrade.
@@ -96,7 +136,8 @@ This also applies if an official server writes settings while both clients are c
 
 Space keybindings you add to `userdata/keybindings.json` are unknown to the official app:
 it shows a config warning and stops backfilling new default shortcuts until those entries are
-removed. No default space shortcuts ship for this reason.
+removed. No default space shortcuts ship: startup would backfill them into the user's file,
+creating those compatibility issues automatically.
 
 ## Try desktop beside the official app
 
