@@ -19,6 +19,7 @@ import {
   type ServerSettings,
   type SidebarSpace,
 } from "@t3tools/contracts";
+import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 
 import { toastManager } from "../components/ui/toast";
@@ -185,10 +186,13 @@ export function useSidebarSpaceWriter(): {
       });
       if (result._tag === "Success") {
         const spaces = result.value.sidebarSpaces;
-        sidebarSpaceAcknowledgements.set(environmentId, {
-          spaces,
-          settings: appAtomRegistry.get(serverEnvironment.settingsValueAtom(environmentId)),
-        });
+        const current = appAtomRegistry.get(serverEnvironment.settingsValueAtom(environmentId));
+        // A push during the write that changed spaces is newer server state; one that did not may lag this write.
+        if (current === settings || Equal.equals(current?.sidebarSpaces, settings.sidebarSpaces)) {
+          sidebarSpaceAcknowledgements.set(environmentId, { spaces, settings: current });
+        } else {
+          sidebarSpaceAcknowledgements.delete(environmentId);
+        }
         return spaces;
       }
       if (!isAtomCommandInterrupted(result)) {

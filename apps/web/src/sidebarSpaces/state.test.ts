@@ -135,6 +135,31 @@ describe("useSidebarSpaceWriter", () => {
     },
   );
 
+  it("builds on a push that changed spaces while the write was in flight", async () => {
+    const environmentId = EnvironmentId.make("newer-push-before-acknowledgement");
+    const base = space("base");
+    const first = space("first");
+    const external = space("external");
+    const second = space("second");
+    const { persisted, deferWrite } = setup([base]);
+    const firstWrite = deferWrite();
+    const writer = useSidebarSpaceWriter();
+    const firstSave = writer.save(first, environmentId);
+    await firstWrite.started;
+    mocks.readSettings.mockReturnValue({ sidebarSpaces: [base, first, external] });
+    firstWrite.complete(true);
+    expect(await firstSave).toBe(true);
+
+    const secondWrite = deferWrite();
+    const secondSave = writer.save(second, environmentId);
+    const secondPatch = await secondWrite.started;
+    secondWrite.complete(true);
+    expect(await secondSave).toBe(true);
+
+    expect(secondPatch.input.patch.sidebarSpaces).toEqual([base, first, external, second]);
+    expect(persisted.get(environmentId)).toEqual([base, first, external, second]);
+  });
+
   it("keeps the last successful list when a queued write fails", async () => {
     const environmentId = EnvironmentId.make("failed-save");
     const base = space("base");
