@@ -73,6 +73,12 @@ it.each([
   expect(mobileSpaceHomeScopeResult(resolveSidebarSpaceScope({ enabled: true, ...input }))).toEqual(
     expected,
   );
+  const withManualFilter = mobileSpaceHomeScopeResult(
+    resolveSidebarSpaceScope({ enabled: true, ...input, hasManualFilter: true }),
+  );
+  expect(withManualFilter).toEqual(
+    input.activeSpaceKey === null ? { ...expected, selection: { kind: "custom" } } : expected,
+  );
 });
 
 it.each([null, space.key])(

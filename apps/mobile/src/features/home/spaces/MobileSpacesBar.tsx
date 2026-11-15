@@ -20,6 +20,7 @@ export function MobileSpacesBar(props: {
   readonly threads: ReadonlyArray<EnvironmentThreadShell>;
   readonly onProjectChange: (key: string | null) => void;
   readonly gutter: number;
+  readonly contentGutter?: number;
 }) {
   const { spaces, groups } = props.activeSpace;
   const { themeAppearance } = useAppearancePreferences();
@@ -54,7 +55,12 @@ export function MobileSpacesBar(props: {
         marginHorizontal: -props.gutter,
         overflow: "visible",
       }}
-      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 2, paddingBottom: 10, gap: 8 }}
+      contentContainerStyle={{
+        paddingHorizontal: props.contentGutter ?? 20,
+        paddingTop: 2,
+        paddingBottom: 10,
+        gap: 8,
+      }}
     >
       <Chip
         label="All"

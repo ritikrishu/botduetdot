@@ -44,6 +44,11 @@ import { useThreadListV2 } from "./useThreadListV2";
 import { useThreadJumpShortcuts } from "../keyboard/threadKeyboardShortcuts";
 import { requestThreadMessageJump } from "./threadMessageJump";
 import { useThreadListSearchMatches } from "./useThreadListSearchMatches";
+import { MobileSpacesBar } from "../home/spaces/MobileSpacesBar";
+import {
+  useActiveSpaceHomeScope,
+  useSpaceDetachingProjectKeySetter,
+} from "../home/spaces/useActiveSpaceHomeScope";
 import { useHomeListOptions } from "../home/home-list-options";
 import { buildHomeListFilterMenuItems } from "../home/home-list-filter-menu";
 import { buildHomeProjectScopes } from "../home/homeThreadList";
@@ -156,8 +161,17 @@ function ThreadNavigationSidebarPane(props: ThreadNavigationSidebarProps) {
   const availableEnvironmentIds = new Set(
     environments.map((environment) => environment.environmentId),
   );
-  const { options, setSelectedEnvironmentId, setSelectedProjectKey } =
-    useHomeListOptions(availableEnvironmentIds);
+  const {
+    options,
+    setSelectedEnvironmentId,
+    setSelectedProjectKey: setProjectKeyKeepingSpace,
+  } = useHomeListOptions(availableEnvironmentIds);
+  const setSelectedProjectKey = useSpaceDetachingProjectKeySetter(setProjectKeyKeepingSpace);
+  const activeSpace = useActiveSpaceHomeScope({
+    projects,
+    projectGroupingMode: options.projectGroupingMode,
+    selectedProjectKey: options.selectedProjectKey,
+  });
   const searchEnvironmentIds =
     options.selectedEnvironmentId === null
       ? workspaceEnvironments
@@ -205,8 +219,9 @@ function ThreadNavigationSidebarPane(props: ThreadNavigationSidebarProps) {
     [projectScopes],
   );
   // An archived project's filter reads as all projects, matching the filter menu.
-  const selectedProjectScope =
+  const manualProjectScope =
     pickableProjectGroups(projectScopes).find((scope) => scope.key === resolvedProjectKey) ?? null;
+  const selectedProjectScope = activeSpace.list ? activeSpace.list.scope : manualProjectScope;
   const threadSearch = useThreadSearch(
     searchEnvironmentIds,
     props.searchQuery,
@@ -217,7 +232,7 @@ function ThreadNavigationSidebarPane(props: ThreadNavigationSidebarProps) {
   // This map reaches LegendList's extraData, which re-renders every row whenever it changes
   // identity; the hook keeps it stable.
   const threadSearchMatchByKey = useThreadListSearchMatches(threads, threadSearch);
-  const selectedProjectKey = selectedProjectScope?.key ?? null;
+  const selectedProjectKey = manualProjectScope?.key ?? null;
   const projectByKey = useMemo(() => {
     const map = new Map<string, EnvironmentProject>();
     for (const project of projects) {
@@ -229,7 +244,7 @@ function ThreadNavigationSidebarPane(props: ThreadNavigationSidebarProps) {
   const [settledVisibleCount, setSettledVisibleCount] = useState(
     THREAD_LIST_V2_SETTLED_INITIAL_COUNT,
   );
-  const settledResetKey = `${options.selectedEnvironmentId ?? "all"}:${selectedProjectKey ?? "all"}:${props.searchQuery.trim()}`;
+  const settledResetKey = `${options.selectedEnvironmentId ?? "all"}:${selectedProjectScope?.key ?? "all"}:${props.searchQuery.trim()}`;
   const [lastSettledResetKey, setLastSettledResetKey] = useState(settledResetKey);
   if (lastSettledResetKey !== settledResetKey) {
     setLastSettledResetKey(settledResetKey);
@@ -556,6 +571,15 @@ function ThreadNavigationSidebarPane(props: ThreadNavigationSidebarProps) {
       }}
     />
   );
+  const spacesBar = (
+    <MobileSpacesBar
+      activeSpace={activeSpace}
+      threads={threads}
+      onProjectChange={setProjectKeyKeepingSpace}
+      gutter={0}
+      contentGutter={12}
+    />
+  );
   const listEmpty = (
     <Text
       className={
@@ -613,6 +637,7 @@ function ThreadNavigationSidebarPane(props: ThreadNavigationSidebarProps) {
                 scrollEventThrottle={16}
                 showsVerticalScrollIndicator={false}
                 style={styles.threadList}
+                ListHeaderComponent={spacesBar}
                 ListEmptyComponent={listEmpty}
               />
             </GestureDetector>
@@ -637,6 +662,7 @@ function ThreadNavigationSidebarPane(props: ThreadNavigationSidebarProps) {
           overflow: "hidden",
         }}
       >
+        {spacesBar}
         {listItems.length === 0 ? (
           <View className="flex-1 items-center justify-center">{listEmpty}</View>
         ) : (
