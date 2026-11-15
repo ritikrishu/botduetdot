@@ -13,12 +13,7 @@ import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
-import {
-  AuthSettingsWriteScope,
-  type EnvironmentId,
-  type ServerSettings,
-  type SidebarSpace,
-} from "@t3tools/contracts";
+import { AuthSettingsWriteScope, type EnvironmentId, type SidebarSpace } from "@t3tools/contracts";
 import * as Equal from "effect/Equal";
 import * as Schema from "effect/Schema";
 
@@ -29,13 +24,17 @@ import {
   writeLocalStorageValue,
 } from "../hooks/useLocalStorage";
 import { useClientSettings } from "../hooks/useSettings";
-import { appAtomRegistry } from "../rpc/atomRegistry";
+import { appAtomRegistry, subscribeAtomChanges } from "../rpc/atomRegistry";
 import type { SidebarProjectSnapshot } from "../sidebarProjectGrouping";
 import { useEnvironments } from "../state/environments";
 import { environmentSummaries } from "../state/presentation";
 import { primaryEnvironmentIdAtom } from "../state/primaryEnvironment";
 import { serverEnvironment } from "../state/server";
-import { readEnvironmentScope, useEnvironmentsWithScope } from "../state/session";
+import {
+  environmentSession,
+  readEnvironmentScope,
+  useEnvironmentsWithScope,
+} from "../state/session";
 import { useAtomCommand } from "../state/use-atom-command";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { useUiStateStore } from "../uiStateStore";
@@ -96,41 +95,114 @@ export function sidebarSpaceGroupsOf(
   }));
 }
 
-const sidebarSpaceWriteQueues = new Map<
-  EnvironmentId,
-  { tail: Promise<void>; spaces: ReadonlyArray<SidebarSpace> | undefined }
->();
-
-const sidebarSpaceAcknowledgements = new Map<
-  EnvironmentId,
-  { spaces: ReadonlyArray<SidebarSpace>; settings: ServerSettings | null }
->();
+const sidebarSpaceWriteQueues = new Map<EnvironmentId, Promise<void>>();
 
 function enqueueSidebarSpaceUpdate(
   environmentId: EnvironmentId,
-  update: (
-    spaces: ReadonlyArray<SidebarSpace> | undefined,
-  ) => Promise<ReadonlyArray<SidebarSpace> | undefined>,
+  update: () => Promise<boolean>,
 ): Promise<boolean> {
-  const queue = sidebarSpaceWriteQueues.get(environmentId) ?? {
-    tail: Promise.resolve(),
-    spaces: undefined,
-  };
-  const result = queue.tail.then(async () => {
-    const spaces = await update(queue.spaces);
-    if (spaces === undefined) return false;
-    queue.spaces = spaces;
-    return true;
-  });
+  const result = (sidebarSpaceWriteQueues.get(environmentId) ?? Promise.resolve()).then(update);
   const tail = result.then(
     () => undefined,
     () => undefined,
   );
-  queue.tail = tail;
-  sidebarSpaceWriteQueues.set(environmentId, queue);
+  sidebarSpaceWriteQueues.set(environmentId, tail);
   return result.finally(() => {
-    if (queue.tail === tail) sidebarSpaceWriteQueues.delete(environmentId);
+    if (sidebarSpaceWriteQueues.get(environmentId) === tail) {
+      sidebarSpaceWriteQueues.delete(environmentId);
+    }
   });
+}
+
+// Settings pushes arrive in server commit order, but a reply can beat or trail its own push and the
+// settings atom keeps only the last push of a batch. Writes build on acknowledged lists until echoed.
+const SIDEBAR_SPACE_ECHO_WAIT_MS = 15_000;
+
+interface SidebarSpaceEchoWait {
+  /** Acknowledged lists the settings stream has not echoed yet, oldest first. */
+  unechoed: Array<ReadonlyArray<SidebarSpace>>;
+  /** While a write is in flight: pushed lists that echoed none of `unechoed`. */
+  inFlight: Array<ReadonlyArray<SidebarSpace>> | null;
+  observed: ReadonlyArray<SidebarSpace> | undefined;
+  expiresAt: number;
+  stop: () => void;
+}
+
+const sidebarSpaceEchoWaits = new Map<EnvironmentId, SidebarSpaceEchoWait>();
+
+function settleSidebarSpaceEchoWait(environmentId: EnvironmentId, wait: SidebarSpaceEchoWait) {
+  if (wait.inFlight !== null || wait.unechoed.length > 0) return;
+  wait.stop();
+  sidebarSpaceEchoWaits.delete(environmentId);
+}
+
+function sidebarSpaceEchoWait(environmentId: EnvironmentId): SidebarSpaceEchoWait {
+  const existing = sidebarSpaceEchoWaits.get(environmentId);
+  if (existing !== undefined) return existing;
+  const settingsAtom = serverEnvironment.settingsValueAtom(environmentId);
+  const wait: SidebarSpaceEchoWait = {
+    unechoed: [],
+    inFlight: null,
+    observed: appAtomRegistry.get(settingsAtom)?.sidebarSpaces,
+    expiresAt: 0,
+    stop: () => undefined,
+  };
+  const stopSettings = subscribeAtomChanges(settingsAtom, (settings) => {
+    if (settings === null || Equal.equals(settings.sidebarSpaces, wait.observed)) return;
+    wait.observed = settings.sidebarSpaces;
+    expireOverdueSidebarSpaceEcho(wait);
+    // The earliest match: an older acknowledgement can share a later one's list.
+    const echoed = wait.unechoed.findIndex((spaces) => Equal.equals(spaces, wait.observed));
+    if (echoed >= 0) wait.unechoed.splice(0, echoed + 1);
+    else wait.inFlight?.push(settings.sidebarSpaces);
+    settleSidebarSpaceEchoWait(environmentId, wait);
+  });
+  const stopSession = subscribeAtomChanges(
+    environmentSession.initialConfigValueAtom(environmentId),
+    (config) => {
+      if (config === null) return;
+      // A new connection's first config holds every write acknowledged before it.
+      const fresh = config.settings.sidebarSpaces;
+      wait.unechoed = Equal.equals(fresh, wait.observed) ? [] : [fresh];
+      wait.expiresAt = Date.now() + SIDEBAR_SPACE_ECHO_WAIT_MS;
+      settleSidebarSpaceEchoWait(environmentId, wait);
+    },
+  );
+  wait.stop = () => {
+    stopSettings();
+    stopSession();
+  };
+  sidebarSpaceEchoWaits.set(environmentId, wait);
+  return wait;
+}
+
+function expireOverdueSidebarSpaceEcho(wait: SidebarSpaceEchoWait) {
+  // An echo hidden behind a newer push never arrives; stop holding the list once it is overdue.
+  if (wait.unechoed.length > 0 && Date.now() >= wait.expiresAt) wait.unechoed = [];
+}
+
+async function writeSidebarSpaces(
+  environmentId: EnvironmentId,
+  current: ReadonlyArray<SidebarSpace>,
+  write: (spaces: ReadonlyArray<SidebarSpace>) => Promise<ReadonlyArray<SidebarSpace> | undefined>,
+): Promise<boolean> {
+  const wait = sidebarSpaceEchoWait(environmentId);
+  expireOverdueSidebarSpaceEcho(wait);
+  wait.inFlight = [];
+  try {
+    const acknowledged = await write(wait.unechoed.at(-1) ?? current);
+    if (acknowledged === undefined) return false;
+    if (wait.inFlight.some((spaces) => Equal.equals(spaces, acknowledged))) {
+      wait.unechoed = [];
+    } else if (!Equal.equals(acknowledged, wait.unechoed.at(-1) ?? wait.observed)) {
+      wait.unechoed.push(acknowledged);
+      wait.expiresAt = Date.now() + SIDEBAR_SPACE_ECHO_WAIT_MS;
+    }
+    return true;
+  } finally {
+    wait.inFlight = null;
+    settleSidebarSpaceEchoWait(environmentId, wait);
+  }
 }
 
 export function useSidebarSpaceWriter(): {
@@ -150,7 +222,7 @@ export function useSidebarSpaceWriter(): {
     environmentId: EnvironmentId,
     transform: (spaces: ReadonlyArray<SidebarSpace>) => SidebarSpace[],
   ): Promise<boolean> =>
-    enqueueSidebarSpaceUpdate(environmentId, async (lastSuccessfulSpaces) => {
+    enqueueSidebarSpaceUpdate(environmentId, async () => {
       const label =
         environments.find((environment) => environment.environmentId === environmentId)?.label ??
         environmentId;
@@ -160,7 +232,7 @@ export function useSidebarSpaceWriter(): {
           title: "Space not saved",
           description: `This connection lacks permission to change settings on ${label}.`,
         });
-        return undefined;
+        return false;
       }
       const settings = appAtomRegistry.get(serverEnvironment.settingsValueAtom(environmentId));
       if (settings === null) {
@@ -169,41 +241,24 @@ export function useSidebarSpaceWriter(): {
           title: "Space not saved",
           description: `Settings on ${label} are unavailable. Try reconnecting and saving again.`,
         });
-        return undefined;
+        return false;
       }
-      let acknowledged = sidebarSpaceAcknowledgements.get(environmentId);
-      if (acknowledged !== undefined && acknowledged.settings !== settings) {
-        sidebarSpaceAcknowledgements.delete(environmentId);
-        acknowledged = undefined;
-      }
-      // The settings stream may lag behind successful writes even after the queue drains.
-      const sidebarSpaces = transform(
-        lastSuccessfulSpaces ?? acknowledged?.spaces ?? settings.sidebarSpaces,
-      );
-      const result = await persist({
-        environmentId,
-        input: { patch: { sidebarSpaces } },
-      });
-      if (result._tag === "Success") {
-        const spaces = result.value.sidebarSpaces;
-        const current = appAtomRegistry.get(serverEnvironment.settingsValueAtom(environmentId));
-        // A push during the write that changed spaces is newer server state; one that did not may lag this write.
-        if (current === settings || Equal.equals(current?.sidebarSpaces, settings.sidebarSpaces)) {
-          sidebarSpaceAcknowledgements.set(environmentId, { spaces, settings: current });
-        } else {
-          sidebarSpaceAcknowledgements.delete(environmentId);
-        }
-        return spaces;
-      }
-      if (!isAtomCommandInterrupted(result)) {
-        const error = squashAtomCommandFailure(result);
-        toastManager.add({
-          type: "error",
-          title: "Space not saved",
-          description: `Could not save on ${label}: ${error instanceof Error ? error.message : "The save failed. Try reconnecting and saving again."}`,
+      return writeSidebarSpaces(environmentId, settings.sidebarSpaces, async (spaces) => {
+        const result = await persist({
+          environmentId,
+          input: { patch: { sidebarSpaces: transform(spaces) } },
         });
-      }
-      return undefined;
+        if (result._tag === "Success") return result.value.sidebarSpaces;
+        if (!isAtomCommandInterrupted(result)) {
+          const error = squashAtomCommandFailure(result);
+          toastManager.add({
+            type: "error",
+            title: "Space not saved",
+            description: `Could not save on ${label}: ${error instanceof Error ? error.message : "The save failed. Try reconnecting and saving again."}`,
+          });
+        }
+        return undefined;
+      });
     });
 
   return {
