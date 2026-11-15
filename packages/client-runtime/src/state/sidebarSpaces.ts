@@ -288,9 +288,9 @@ export function sidebarSpaceIconParts(
 }
 
 // Hermes has no Intl.Segmenter: keep combining marks, emoji modifiers/variation selectors and ZWJ joins.
-const GRAPHEME_EXTEND = String.raw`(?:\p{M}|[\u{1F3FB}-\u{1F3FF}]|︎|️)*`;
+const GRAPHEME_EXTEND = String.raw`(?:\p{M}|[\u{1F3FB}-\u{1F3FF}]|︎|️|[\u{E0020}-\u{E007F}])*`;
 const FIRST_GRAPHEME = new RegExp(
-  String.raw`^[\s\S]${GRAPHEME_EXTEND}(?:‍[\s\S]${GRAPHEME_EXTEND})*`,
+  String.raw`^(?:[\u{1F1E6}-\u{1F1FF}]{2}|[\s\S]${GRAPHEME_EXTEND}(?:‍[\s\S]${GRAPHEME_EXTEND})*)`,
   "u",
 );
 

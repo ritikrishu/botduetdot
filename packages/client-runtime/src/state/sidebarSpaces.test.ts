@@ -457,6 +457,11 @@ it("distinguishes icon strings and takes a whole first grapheme for monograms", 
   expect(sidebarSpaceMonogram("bots")).toBe("B");
   expect(sidebarSpaceMonogram("e\u0301quipe")).toBe("E\u0301");
   expect(sidebarSpaceMonogram("👩🏽‍💻 Work")).toBe("👩🏽‍💻");
+  expect(sidebarSpaceMonogram("🇺🇸 Team")).toBe("🇺🇸");
+  expect(
+    sidebarSpaceMonogram("\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F} UK"),
+  ).toBe("\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}");
+  expect(sidebarSpaceMonogram("1️⃣ One")).toBe("1️⃣");
   expect(sidebarSpaceMonogram("")).toBe("");
 });
 
