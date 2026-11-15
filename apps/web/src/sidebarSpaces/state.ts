@@ -34,10 +34,10 @@ import { useAtomCommand } from "../state/use-atom-command";
 import { useThreadSelectionStore } from "../threadSelectionStore";
 import { useUiStateStore } from "../uiStateStore";
 
-export const ACTIVE_SIDEBAR_SPACE_STORAGE_KEY = "t3code:sidebar-spaces:active:v1";
+const ACTIVE_SIDEBAR_SPACE_STORAGE_KEY = "t3code:sidebar-spaces:active:v1";
 const activeSidebarSpaceKeySchema = Schema.NullOr(Schema.String);
 
-export const sidebarSpacesAtom = createSidebarSpacesAtom({
+const sidebarSpacesAtom = createSidebarSpacesAtom({
   environmentIdsAtom: environmentSummaries.connectedEnvironmentIdsAtom,
   settingsValueAtom: serverEnvironment.settingsValueAtom,
   preferredEnvironmentIdAtom: primaryEnvironmentIdAtom,

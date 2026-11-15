@@ -2,7 +2,7 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { ForwardCompatibleArray, TrimmedNonEmptyString } from "./baseSchemas.ts";
 
-export const SIDEBAR_SPACES_MAX = 24;
+const SIDEBAR_SPACES_MAX = 24;
 export const SIDEBAR_SPACE_NAME_MAX_LENGTH = 40;
 const SIDEBAR_SPACE_PROJECT_REFS_MAX = 512;
 // Real project refs contain a colon, so this sentinel cannot collide with one.

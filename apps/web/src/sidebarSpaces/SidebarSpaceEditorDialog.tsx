@@ -111,36 +111,27 @@ function SpaceEditorForm({
   const save = async () => {
     if (!canSave || home === null) return;
     setBusy(true);
-    try {
-      const spaceId = existing?.space.id ?? randomUUID();
-      if (
-        await writer.save({ id: spaceId, name: trimmedName, icon: trimmedIcon, projectRefs }, home)
-      ) {
-        if (request.mode === "create") activateSidebarSpace(sidebarSpaceKey(home, spaceId));
-        onClose();
-      }
-    } finally {
-      setBusy(false);
-    }
+    const spaceId = existing?.space.id ?? randomUUID();
+    const saved = await writer
+      .save({ id: spaceId, name: trimmedName, icon: trimmedIcon, projectRefs }, home)
+      .catch(() => false);
+    setBusy(false);
+    if (!saved) return;
+    if (request.mode === "create") activateSidebarSpace(sidebarSpaceKey(home, spaceId));
+    onClose();
   };
   const remove = async () => {
     if (existing === null || !editable || busy) return;
     setBusy(true);
-    try {
-      if (
-        !(await requestConfirmDialog(
-          `Delete space “${existing.space.name}”? Projects and threads will be kept.`,
-          { variant: "destructive" },
-        ))
-      )
-        return;
-      if (await writer.remove(existing.key)) {
-        if (readActiveSidebarSpaceKey() === existing.key) activateSidebarSpace(null);
-        onClose();
-      }
-    } finally {
-      setBusy(false);
-    }
+    const confirmed = await requestConfirmDialog(
+      `Delete space “${existing.space.name}”? Projects and threads will be kept.`,
+      { variant: "destructive" },
+    )?.catch(() => false);
+    const removed = confirmed && (await writer.remove(existing.key).catch(() => false));
+    setBusy(false);
+    if (!removed) return;
+    if (readActiveSidebarSpaceKey() === existing.key) activateSidebarSpace(null);
+    onClose();
   };
 
   return (
