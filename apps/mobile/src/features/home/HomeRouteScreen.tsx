@@ -24,6 +24,7 @@ import {
   useWorkspacePaneState,
 } from "../layout/AdaptiveWorkspaceLayout";
 import { AndroidHomeFabLayout } from "./AndroidHomeFab";
+import { useSpaceDetachingProjectKeySetter } from "./spaces/useActiveSpaceHomeScope";
 import { HomeScreen } from "./HomeScreen";
 import { useHomeListOptions } from "./home-list-options";
 import { useAtomValueWhileVisible, useHomeRouteVisible } from "./home-route-visibility";
@@ -120,8 +121,9 @@ export function HomeRouteScreen() {
   const {
     options: listOptions,
     setSelectedEnvironmentId,
-    setSelectedProjectKey,
+    setSelectedProjectKey: setProjectKeyKeepingSpace,
   } = useHomeListOptions(availableEnvironmentIds);
+  const setSelectedProjectKey = useSpaceDetachingProjectKeySetter(setProjectKeyKeepingSpace);
   const selectedEnvironmentId = listOptions.selectedEnvironmentId;
   // A legacy per-environment scratch key resolves here on every render; the stored
   // value is only rewritten when the user picks a filter.

@@ -89,6 +89,8 @@ import { createSwipeRowActivation } from "./swipe-row-activation";
 import { SwipeableScrollGateProvider, useSwipeableScrollGate } from "./thread-swipe-actions";
 import { useFabScroll } from "./FabScrollContext";
 import { useWorkspaceTabs } from "../layout/workspace/WorkspaceTabsContext";
+import { MobileSpacesBar } from "./spaces/MobileSpacesBar";
+import { useActiveSpaceHomeScope } from "./spaces/useActiveSpaceHomeScope";
 import { ThreadListFilters } from "./ThreadListFilters";
 
 interface HomeScreenProps {
@@ -388,12 +390,16 @@ export function HomeScreen(props: HomeScreenProps) {
     return map;
   })();
 
-  const v2ProjectScopeKey = props.selectedProjectKey;
+  const activeSpace = useActiveSpaceHomeScope({
+    projects,
+    projectGroupingMode,
+    selectedProjectKey: props.selectedProjectKey,
+  });
+  const v2ProjectScopeKey = activeSpace.list ? activeSpace.list.scopeKey : props.selectedProjectKey;
   // An archived project's filter reads as all projects, matching the filter menu.
-  const v2ScopedProjectGroup = findHomeProjectScope(
-    pickableProjectGroups(projectScopes),
-    v2ProjectScopeKey,
-  );
+  const v2ScopedProjectGroup = activeSpace.list
+    ? activeSpace.list.scope
+    : findHomeProjectScope(pickableProjectGroups(projectScopes), v2ProjectScopeKey);
   const threadSearch = useThreadSearch(
     searchEnvironmentIds,
     props.searchQuery,
@@ -673,6 +679,17 @@ export function HomeScreen(props: HomeScreenProps) {
     projectCount: props.projects.length,
   });
 
+  const spacesBar = (
+    <MobileSpacesBar
+      activeSpace={activeSpace}
+      projects={props.projects}
+      projectGroupingMode={props.projectGroupingMode}
+      threads={props.threads}
+      onProjectChange={props.onProjectChange}
+      gutter={sidebarSurface ? 8 : 0}
+    />
+  );
+
   if (!hasAnyThreads) {
     return (
       <View className={containerClassName}>
@@ -691,6 +708,7 @@ export function HomeScreen(props: HomeScreenProps) {
             }}
           >
             <View className="w-full max-w-[430px]">
+              {spacesBar}
               <EmptyState
                 title={emptyState.title}
                 detail={emptyState.detail}
@@ -730,6 +748,7 @@ export function HomeScreen(props: HomeScreenProps) {
   const v2ListHeader = (
     <>
       {listHeader}
+      {spacesBar}
       {Platform.OS === "ios" && workspace ? (
         <ThreadListFilters
           gutter={sidebarSurface ? 8 : 0}
@@ -781,6 +800,7 @@ export function HomeScreen(props: HomeScreenProps) {
           className="flex-1 items-center justify-center px-4"
           style={{ paddingBottom: insets.bottom }}
         >
+          {spacesBar}
           {v2ListEmpty}
         </View>
       </ScreenContent>
