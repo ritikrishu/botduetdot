@@ -14,7 +14,7 @@ const mobileSidebarSpacesAtom = createSidebarSpacesAtom({
   environmentIdsAtom: connectedEnvironmentIdsAtom,
   settingsValueAtom: serverEnvironment.settingsValueAtom,
 });
-const activeMobileSidebarSpaceKeyAtom = Atom.make<string | null>(null);
+export const activeMobileSidebarSpaceKeyAtom = Atom.make<string | null>(null).pipe(Atom.keepAlive);
 const activeSpaceKeyStore = createActiveSpaceKeyStore({
   read: async () => {
     await whenProtectedDataAvailable();

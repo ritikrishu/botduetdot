@@ -100,3 +100,12 @@ export function useSpaceDetachingProjectKeySetter(
     [set],
   );
 }
+
+export function selectMobileSpace(
+  key: string | null,
+  setProjectKey: (key: string | null) => void,
+  setSpaceKey: (key: string | null) => void,
+): void {
+  setProjectKey(null);
+  setSpaceKey(key);
+}

@@ -110,6 +110,7 @@ interface HomeScreenProps {
   readonly onSearchQueryChange: (query: string) => void;
   readonly onEnvironmentChange: (environmentId: EnvironmentId | null) => void;
   readonly onProjectChange: (projectKey: string | null) => void;
+  readonly onSpaceProjectChange: (projectKey: string | null) => void;
   readonly onAddConnection: () => void;
   readonly onOpenSettings: () => void;
   readonly onStartNewTask: () => void;
@@ -683,8 +684,7 @@ export function HomeScreen(props: HomeScreenProps) {
     <MobileSpacesBar
       activeSpace={activeSpace}
       threads={props.threads}
-      selectedProjectKey={props.selectedProjectKey}
-      onProjectChange={props.onProjectChange}
+      onProjectChange={props.onSpaceProjectChange}
       gutter={sidebarSurface ? 8 : 0}
     />
   );

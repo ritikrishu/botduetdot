@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vite-plus/test";
+import { AtomRegistry } from "effect/reactivity";
+import { describe, expect, it, onTestFinished, vi } from "vite-plus/test";
 import { createActiveSpaceKeyStore } from "./activeSpaceKeyStore";
 
 function deferred<T>() {
@@ -118,4 +119,40 @@ describe("active space persistence", () => {
     store.set("env:k");
     expect(await persisted.promise).toBe("env:k");
   });
+});
+
+vi.mock("expo-secure-store", () => ({}));
+vi.mock("../../../lib/protectedData", () => ({}));
+vi.mock("../../../state/presentation", () => ({ connectedEnvironmentIdsAtom: undefined }));
+vi.mock("../../../state/server", () => ({ serverEnvironment: {} }));
+vi.mock("@t3tools/client-runtime/state/sidebar-spaces", () => ({
+  createSidebarSpacesAtom: () => undefined,
+}));
+
+import { activeMobileSidebarSpaceKeyAtom } from "./mobileSpacesState";
+
+it("retains the selected space after Home unsubscribes and subscribes again", async () => {
+  const tasks: Array<() => void> = [];
+  const registry = AtomRegistry.make({
+    scheduleTask: (task) => {
+      tasks.push(task);
+      return () => {};
+    },
+  });
+  onTestFinished(() => registry.dispose());
+  const store = createActiveSpaceKeyStore({
+    read: async () => "env:old",
+    write: async () => {},
+    publish: (key) => registry.set(activeMobileSidebarSpaceKeyAtom, key),
+  });
+  const unsubscribe = registry.subscribe(activeMobileSidebarSpaceKeyAtom, () => {});
+  await store.hydrate();
+  await store.set("A:bots");
+  expect(registry.get(activeMobileSidebarSpaceKeyAtom)).toBe("A:bots");
+  unsubscribe();
+  for (let task = tasks.shift(); task !== undefined; task = tasks.shift()) task();
+  const stop = registry.subscribe(activeMobileSidebarSpaceKeyAtom, () => {});
+  onTestFinished(stop);
+  await store.hydrate();
+  expect(registry.get(activeMobileSidebarSpaceKeyAtom)).toBe("A:bots");
 });

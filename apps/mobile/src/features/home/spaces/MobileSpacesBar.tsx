@@ -13,12 +13,11 @@ import { Chip } from "../../../components/ui/Chip";
 import { useAppearancePreferences } from "../../settings/appearance/AppearancePreferencesProvider";
 import { resolveThreadListV2Status } from "../../threads/threadListV2";
 import { setActiveMobileSidebarSpaceKey } from "./mobileSpacesState";
-import type { MobileActiveSpace } from "./useActiveSpaceHomeScope";
+import { selectMobileSpace, type MobileActiveSpace } from "./useActiveSpaceHomeScope";
 
 export function MobileSpacesBar(props: {
   readonly activeSpace: MobileActiveSpace;
   readonly threads: ReadonlyArray<EnvironmentThreadShell>;
-  readonly selectedProjectKey: string | null;
   readonly onProjectChange: (key: string | null) => void;
   readonly gutter: number;
 }) {
@@ -62,10 +61,9 @@ export function MobileSpacesBar(props: {
         selected={props.activeSpace.selection.kind === "all"}
         glass
         colorScheme={themeAppearance}
-        onPress={() => {
-          setActiveMobileSidebarSpaceKey(null);
-          if (props.selectedProjectKey !== null) props.onProjectChange(null);
-        }}
+        onPress={() =>
+          selectMobileSpace(null, props.onProjectChange, setActiveMobileSidebarSpaceKey)
+        }
       />
       {spaces.map(({ key, space }) => {
         const selected =
@@ -77,10 +75,8 @@ export function MobileSpacesBar(props: {
         const unresolved = props.activeSpace.unresolvedSpaceKey === key;
         const label = `${glyph} ${space.name}`;
         const accessibilityLabel = `${space.name}${unresolved ? ", no matching projects" : ""}${needsYou ? ", needs you" : ""}`;
-        const onPress = () => {
-          if (props.selectedProjectKey !== null) props.onProjectChange(null);
-          setActiveMobileSidebarSpaceKey(key);
-        };
+        const onPress = () =>
+          selectMobileSpace(key, props.onProjectChange, setActiveMobileSidebarSpaceKey);
         return (
           <View key={key}>
             {unresolved ? (
