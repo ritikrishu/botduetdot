@@ -284,7 +284,7 @@ uninstalling first, which removes local app data. For private sideloading this d
 works; for distribution, create a dedicated release keystore and configure Gradle release signing,
 then consistently use that key for all subsequent builds.
 
-On Galaxy phones from One UI 6.1.1 on (including recent Folds), **Auto Blocker** is on by default and
+On Galaxy phones released with One UI 6.1.1 or later (including recent Folds), **Auto Blocker** is on by default and
 blocks both install routes below: turn it off under **Settings → Security and privacy → Auto
 Blocker** before each install or reinstall, and back on afterwards if you want it. Unlock
 **Developer options** by tapping **Settings → About phone → Software information → Build number**
