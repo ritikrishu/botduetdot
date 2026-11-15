@@ -90,6 +90,38 @@ export function sidebarSpaceGroupsOf(
   }));
 }
 
+const sidebarSpaceWriteQueues = new Map<
+  EnvironmentId,
+  { tail: Promise<void>; spaces: ReadonlyArray<SidebarSpace> | undefined }
+>();
+
+function enqueueSidebarSpaceUpdate(
+  environmentId: EnvironmentId,
+  update: (
+    spaces: ReadonlyArray<SidebarSpace> | undefined,
+  ) => Promise<ReadonlyArray<SidebarSpace> | undefined>,
+): Promise<boolean> {
+  const queue = sidebarSpaceWriteQueues.get(environmentId) ?? {
+    tail: Promise.resolve(),
+    spaces: undefined,
+  };
+  const result = queue.tail.then(async () => {
+    const spaces = await update(queue.spaces);
+    if (spaces === undefined) return false;
+    queue.spaces = spaces;
+    return true;
+  });
+  const tail = result.then(
+    () => undefined,
+    () => undefined,
+  );
+  queue.tail = tail;
+  sidebarSpaceWriteQueues.set(environmentId, queue);
+  return result.finally(() => {
+    if (queue.tail === tail) sidebarSpaceWriteQueues.delete(environmentId);
+  });
+}
+
 export function useSidebarSpaceWriter(): {
   canEdit(environmentId: EnvironmentId): boolean;
   save(space: SidebarSpace, homeEnvironmentId: EnvironmentId): Promise<boolean>;
@@ -103,44 +135,47 @@ export function useSidebarSpaceWriter(): {
     reportFailure: false,
   });
 
-  const update = async (
+  const update = (
     environmentId: EnvironmentId,
     transform: (spaces: ReadonlyArray<SidebarSpace>) => SidebarSpace[],
-  ): Promise<boolean> => {
-    const label =
-      environments.find((environment) => environment.environmentId === environmentId)?.label ??
-      environmentId;
-    if (!readEnvironmentScope(environmentId, AuthSettingsWriteScope)) {
-      toastManager.add({
-        type: "warning",
-        title: "Space not saved",
-        description: `This connection lacks permission to change settings on ${label}.`,
+  ): Promise<boolean> =>
+    enqueueSidebarSpaceUpdate(environmentId, async (lastSuccessfulSpaces) => {
+      const label =
+        environments.find((environment) => environment.environmentId === environmentId)?.label ??
+        environmentId;
+      if (!readEnvironmentScope(environmentId, AuthSettingsWriteScope)) {
+        toastManager.add({
+          type: "warning",
+          title: "Space not saved",
+          description: `This connection lacks permission to change settings on ${label}.`,
+        });
+        return undefined;
+      }
+      const settings = appAtomRegistry.get(serverEnvironment.settingsValueAtom(environmentId));
+      if (settings === null) {
+        toastManager.add({
+          type: "warning",
+          title: "Space not saved",
+          description: `Settings on ${label} are unavailable. Try reconnecting and saving again.`,
+        });
+        return undefined;
+      }
+      // The settings stream may lag behind successful writes in this queue.
+      const sidebarSpaces = transform(lastSuccessfulSpaces ?? settings.sidebarSpaces);
+      const result = await persist({
+        environmentId,
+        input: { patch: { sidebarSpaces } },
       });
-      return false;
-    }
-    const settings = appAtomRegistry.get(serverEnvironment.settingsValueAtom(environmentId));
-    if (settings === null) {
-      toastManager.add({
-        type: "warning",
-        title: "Space not saved",
-        description: `Settings on ${label} are unavailable. Try reconnecting and saving again.`,
-      });
-      return false;
-    }
-    const result = await persist({
-      environmentId,
-      input: { patch: { sidebarSpaces: transform(settings.sidebarSpaces) } },
+      if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+        const error = squashAtomCommandFailure(result);
+        toastManager.add({
+          type: "error",
+          title: "Space not saved",
+          description: `Could not save on ${label}: ${error instanceof Error ? error.message : "The save failed. Try reconnecting and saving again."}`,
+        });
+      }
+      return result._tag === "Success" ? sidebarSpaces : undefined;
     });
-    if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
-      const error = squashAtomCommandFailure(result);
-      toastManager.add({
-        type: "error",
-        title: "Space not saved",
-        description: `Could not save on ${label}: ${error instanceof Error ? error.message : "The save failed. Try reconnecting and saving again."}`,
-      });
-    }
-    return result._tag === "Success";
-  };
 
   return {
     canEdit: (environmentId) => writableEnvironments.has(environmentId),
