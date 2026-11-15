@@ -42,8 +42,6 @@ Known limits and follow-ups:
   indistinguishable to space identity; composite keys cannot solve a cloned environment id.
 - The 24-space cap is enforced only by the patch schema, per home. Persisted decoding has no
   cap, and the UI does not disable creation at the cap; saving a 25th space fails validation.
-- The mobile split-view list on pre-iPadOS 26 iPads and Android tablets/foldables has no spaces
-  bar yet ([ThreadNavigationSidebar.tsx](apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx)).
 - [Packaged daily-use desktop builds](#daily-desktop-use-open-follow-up) still need a verified
   install/update procedure and independent app identity.
 
@@ -51,19 +49,20 @@ Known limits and follow-ups:
 
 Base release: `v0.1.9`. These are all pre-existing files changed by the fork since that tag; review their diffs on each upgrade.
 
-| Upstream file                                       | Fork edit to preserve                                                                                     |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `packages/contracts/src/settings.ts`                | Export space contracts and add lenient persisted settings plus validated settings patches.                |
-| `packages/contracts/src/keybindings.ts`             | Register space command IDs without adding default shortcuts.                                              |
-| `packages/client-runtime/package.json`              | Export the shared `state/sidebar-spaces` module.                                                          |
-| `apps/web/src/components/Sidebar.tsx`               | Wrap project-scope reads/writes with the space hook and mount the strip above the footer.                 |
-| `apps/web/src/components/CommandPalette.tsx`        | Add space actions to the palette.                                                                         |
-| `apps/web/src/routes/__root.tsx`                    | Mount the global space shortcut/editor host.                                                              |
-| `apps/mobile/src/features/home/HomeRouteScreen.tsx` | Detach the active space when the manual project filter changes.                                           |
-| `apps/mobile/src/features/home/HomeScreen.tsx`      | Apply space scope to the list/search and retain the switcher in empty states.                             |
-| `apps/mobile/app.config.ts`                         | Support Personal Team signing, matching keychain identity, no Associated Domains, and OTA off by default. |
-| `apps/mobile/app.config.test.ts`                    | Cover variants, Personal Team signing, bundle identity, entitlements and OTA opt-in.                      |
-| `apps/mobile/README.md`                             | Document Personal Team signing and a preview Release install beside the store app.                        |
+| Upstream file                                                  | Fork edit to preserve                                                                                     |
+| -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `packages/contracts/src/settings.ts`                           | Export space contracts and add lenient persisted settings plus validated settings patches.                |
+| `packages/contracts/src/keybindings.ts`                        | Register space command IDs without adding default shortcuts.                                              |
+| `packages/client-runtime/package.json`                         | Export the shared `state/sidebar-spaces` module.                                                          |
+| `apps/web/src/components/Sidebar.tsx`                          | Wrap project-scope reads/writes with the space hook and mount the strip above the footer.                 |
+| `apps/web/src/components/CommandPalette.tsx`                   | Add space actions to the palette.                                                                         |
+| `apps/web/src/routes/__root.tsx`                               | Mount the global space shortcut/editor host.                                                              |
+| `apps/mobile/src/features/home/HomeRouteScreen.tsx`            | Detach the active space when the manual project filter changes.                                           |
+| `apps/mobile/src/features/home/HomeScreen.tsx`                 | Apply space scope to the list/search and retain the switcher in empty states.                             |
+| `apps/mobile/src/features/threads/ThreadNavigationSidebar.tsx` | Same space scope, detaching setter and switcher for the split view (unfolded foldables, tablets).         |
+| `apps/mobile/app.config.ts`                                    | Support Personal Team signing, matching keychain identity, no Associated Domains, and OTA off by default. |
+| `apps/mobile/app.config.test.ts`                               | Cover variants, Personal Team signing, bundle identity, entitlements and OTA opt-in.                      |
+| `apps/mobile/README.md`                                        | Document Personal Team signing and a preview Release install beside the store app.                        |
 
 New code is isolated under `packages/contracts/src/sidebarSpaces*`,
 `packages/client-runtime/src/state/sidebarSpaces*`, `apps/web/src/sidebarSpaces/`,
@@ -218,6 +217,90 @@ Pair directly with your own fork server over the same LAN or Tailscale network:
 
 Create/edit spaces on desktop or web connected to that fork server. Mobile v1 is view-and-switch
 only; installing the fork mobile client alone does not add spaces to an official server.
+
+## Install on Android (Galaxy Fold)
+
+Build **T3 Code Preview** (`com.t3tools.t3code.preview`) beside the official Play Store app
+(`com.t3tools.t3code`). On an Apple silicon Mac with Homebrew and repository dependencies
+installed (`vp i`), set up JDK 17 and the Android SDK once. No shell profile edits are needed:
+
+```bash
+export PATH="$HOME/.local/share/vite-plus/bin:/opt/homebrew/bin:$PATH"
+brew install openjdk@17
+brew install --cask android-commandlinetools
+export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export ANDROID_HOME="$HOME/Library/Android/sdk"
+export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
+mkdir -p "$ANDROID_HOME/cmdline-tools"
+# Skip this link if it already exists.
+ln -s /opt/homebrew/share/android-commandlinetools/cmdline-tools/latest "$ANDROID_HOME/cmdline-tools/latest"
+yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses
+sdkmanager --sdk_root="$ANDROID_HOME" 'platform-tools' 'platforms;android-37.0' \
+  'build-tools;37.0.0' 'build-tools;36.0.0' 'ndk;27.1.12297006' 'cmake;3.22.1' 'cmake;3.30.5'
+```
+
+These versions match the current Expo 58 / React Native 0.88 native project (Gradle 9.4.1,
+AGP 9.2.1). SDK 37 is published as `platforms;android-37.0`. Allow several GB for downloads
+and build caches. The repository's mobile Brewfile installs linters, not this toolchain.
+
+From the repository root, build a self-contained Release APK for the Fold's ARM64 processor:
+
+```bash
+(
+  set -e
+  export PATH="$HOME/.local/share/vite-plus/bin:/opt/homebrew/bin:$PATH"
+  export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+  export ANDROID_HOME="$HOME/Library/Android/sdk"
+  export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
+  export APP_VARIANT=preview T3CODE_MOBILE_UPDATES_ENABLED=0 EXPO_NO_GIT_STATUS=1
+  export NODE_ENV=production
+  cd apps/mobile
+  vp exec expo prebuild --clean --platform android --no-install
+  mkdir -p "$HOME/.android"
+  if [ ! -f "$HOME/.android/debug.keystore" ]; then
+    keytool -genkeypair -keystore "$HOME/.android/debug.keystore" \
+      -storepass android -alias androiddebugkey -keypass android \
+      -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+  fi
+  cp "$HOME/.android/debug.keystore" android/app/debug.keystore
+  cd android
+  vp exec ./gradlew :app:assembleRelease -PreactNativeArchitectures=arm64-v8a \
+    --max-workers=4 --console=plain
+  mkdir -p "$HOME/t3-fork-apk"
+  cp app/build/outputs/apk/release/app-release.apk "$HOME/t3-fork-apk/t3code-preview.apk"
+)
+```
+
+**Always set `T3CODE_MOBILE_UPDATES_ENABLED=0` for Android fork builds.** The Personal Team
+OTA default-off applies to the iOS setup only; Android otherwise enables upstream updates.
+Keep T3 Connect configuration unset in the root environment files. No `google-services.json`
+is needed for this build. Prebuild replaces the generated `android/` directory; preserve any
+local native edits first. The APK runs without Metro or a development server.
+
+The template signs Release with `android/app/debug.keystore`. The command above copies the
+persistent `~/.android/debug.keystore` there after every prebuild. Back up that key: reinstalling
+with `-r` preserves app data only when the package and signing key match. A different key requires
+uninstalling first, which removes local app data. For private sideloading this debug signature
+works; for distribution, create a dedicated release keystore and configure Gradle release signing,
+then consistently use that key for all subsequent builds.
+
+Enable **Developer options → USB debugging** on the phone, connect USB and accept the Mac's
+RSA authorization prompt. Install with:
+
+```bash
+"$HOME/Library/Android/sdk/platform-tools/adb" install -r "$HOME/t3-fork-apk/t3code-preview.apk"
+```
+
+Alternatively, copy the APK to the phone, open it in Files and allow **Install unknown apps**
+for the app opening it. Keep the official Play Store app for **T3 Connect and push notifications**;
+neither works in the fork app.
+
+Pair with your own fork server over LAN or Tailscale. On the desktop host, open **Settings →
+Sharing & access → Network access**, enable access and create a pairing link with an address
+reachable from the phone (enabling access restarts desktop). Scan the QR **inside the fork app**,
+not with the phone's camera app, or paste the link into **Add environment**. Create/edit spaces
+on desktop or web connected to that server. The spaces bar appears on both the folded cover
+screen and the unfolded inner screen's split view; mobile only views and switches spaces.
 
 ## Daily desktop use: open follow-up
 
