@@ -125,6 +125,8 @@ import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import { useOrderWhileOpen } from "../hooks/useOrderWhileOpen";
 import { useProjectPin } from "../hooks/useProjectGroupUpdate";
 import { useSidebarProjectGroups } from "../hooks/useSidebarProjectGroups";
+import { SidebarSpaces } from "../sidebarSpaces/SidebarSpaces";
+import { useSidebarSpaceScopeKeys } from "../sidebarSpaces/useSidebarSpaceScopeKeys";
 import { isCommandPaletteOpen, openCommandPalette } from "../commandPaletteBus";
 import { registerSettleAndAdvance } from "../settleAndAdvance";
 import { startNewThreadFromContext } from "../lib/chatThreadActions";
@@ -1007,8 +1009,8 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
   );
   const environmentMachineById = useEnvironmentMachines();
   const projectGroupsRef = useRef(projectGroups);
-  const persistedProjectScopeKeys = useUiStateStore((store) => store.sidebarProjectScopeKeys);
-  const setPersistedProjectScopeKeys = useUiStateStore((store) => store.setSidebarProjectScopeKeys);
+  const [persistedProjectScopeKeys, setPersistedProjectScopeKeys] =
+    useSidebarSpaceScopeKeys(projectGroups);
   const [projectScopeMenuState, dispatchProjectScopeMenu] = useReducer(
     reduceSidebarProjectScopeMenuState,
     { open: false, query: "" },
@@ -3650,6 +3652,7 @@ export default function Sidebar({ routeReveal }: { routeReveal: SidebarRouteReve
           ) : null}
         </SidebarGroup>
       </SidebarContent>
+      <SidebarSpaces projectGroups={projectGroups} />
       <SidebarChromeFooter />
     </>
   );
