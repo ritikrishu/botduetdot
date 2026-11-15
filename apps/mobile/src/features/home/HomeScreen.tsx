@@ -682,9 +682,8 @@ export function HomeScreen(props: HomeScreenProps) {
   const spacesBar = (
     <MobileSpacesBar
       activeSpace={activeSpace}
-      projects={props.projects}
-      projectGroupingMode={props.projectGroupingMode}
       threads={props.threads}
+      selectedProjectKey={props.selectedProjectKey}
       onProjectChange={props.onProjectChange}
       gutter={sidebarSurface ? 8 : 0}
     />

@@ -3,6 +3,9 @@ import type { EnvironmentProject } from "@t3tools/client-runtime/state/shell";
 import {
   resolveSidebarSpaceScope,
   type SidebarSpaceSelection,
+  type HomedSidebarSpace,
+  type SidebarSpaceProjectGroup,
+  type SidebarSpaceScope,
 } from "@t3tools/client-runtime/state/sidebar-spaces";
 import type { ScopedProjectRef, SidebarProjectGroupingMode } from "@t3tools/contracts";
 import { useCallback, useMemo } from "react";
@@ -14,6 +17,8 @@ import {
 } from "./mobileSpacesState";
 
 export interface MobileActiveSpace {
+  readonly spaces: ReadonlyArray<HomedSidebarSpace>;
+  readonly groups: ReadonlyArray<SidebarSpaceProjectGroup>;
   readonly selection: SidebarSpaceSelection;
   readonly unresolvedSpaceKey: string | null;
   readonly list: {
@@ -26,7 +31,7 @@ export interface MobileActiveSpace {
   } | null;
 }
 
-export function useMobileSpaceProjectGroups(
+function useMobileSpaceProjectGroups(
   projects: ReadonlyArray<EnvironmentProject>,
   projectGroupingMode: SidebarProjectGroupingMode,
 ) {
@@ -58,6 +63,12 @@ export function useActiveSpaceHomeScope(input: {
     groups,
     hasManualFilter: input.selectedProjectKey !== null,
   });
+  return { spaces, groups, ...mobileSpaceHomeScopeResult(scope) };
+}
+
+export function mobileSpaceHomeScopeResult(
+  scope: SidebarSpaceScope<SidebarSpaceProjectGroup>,
+): Pick<MobileActiveSpace, "selection" | "unresolvedSpaceKey" | "list"> {
   const key = scope.activeSpace ? `space:${scope.activeSpace.key}` : null;
   return {
     selection: scope.selection,

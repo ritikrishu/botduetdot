@@ -4,7 +4,7 @@ export function createActiveSpaceKeyStore(io: {
   readonly publish: (key: string | null) => void;
 }): {
   readonly hydrate: () => Promise<void>;
-  readonly set: (key: string | null) => void;
+  readonly set: (key: string | null) => Promise<void>;
 } {
   let dirty = false;
   let known: string | null | undefined;
@@ -21,7 +21,7 @@ export function createActiveSpaceKeyStore(io: {
             io.publish(key);
           },
           () => {
-            if (!dirty) known = null;
+            if (!dirty) known = undefined;
           },
         );
       return hydration;
@@ -29,9 +29,14 @@ export function createActiveSpaceKeyStore(io: {
     set: (key) => {
       dirty = true;
       io.publish(key);
-      if (known === key) return;
+      if (known === key) return writes;
       known = key;
-      writes = writes.then(() => io.write(key)).catch(() => {});
+      writes = writes
+        .then(() => io.write(key))
+        .catch(() => {
+          known = undefined;
+        });
+      return writes;
     },
   };
 }

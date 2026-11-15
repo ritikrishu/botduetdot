@@ -12,7 +12,12 @@ function deferred<T>() {
 }
 
 describe("active space persistence", () => {
-  it.each(["env:k", null])("keeps a local %s choice over late hydration", async (key) => {
+  it.each([
+    ["env:k", false],
+    [null, false],
+    ["env:k", true],
+    [null, true],
+  ] as const)("keeps local %s over late hydration (rejects: %s)", async (key, rejects) => {
     const read = deferred<string | null>();
     const publish = vi.fn();
     const store = createActiveSpaceKeyStore({
@@ -23,7 +28,8 @@ describe("active space persistence", () => {
     const hydration = store.hydrate();
     store.set(key);
     expect(publish).toHaveBeenLastCalledWith(key);
-    read.resolve("env:old");
+    if (rejects) read.reject(new Error("storage unavailable"));
+    else read.resolve("env:old");
     await hydration;
     expect(publish.mock.calls).toEqual([[key]]);
   });
@@ -73,7 +79,7 @@ describe("active space persistence", () => {
     expect(persisted).toEqual([null, "env:k"]);
   });
 
-  it("treats a failed read as null without publishing", async () => {
+  it("deletes a stale persisted key after a failed read without publishing", async () => {
     const read = deferred<string | null>();
     const publish = vi.fn();
     const write = vi.fn(async () => {});
@@ -82,9 +88,20 @@ describe("active space persistence", () => {
     read.reject(new Error("storage unavailable"));
     await hydration;
     expect(publish).not.toHaveBeenCalled();
-    store.set(null);
+    await store.set(null);
     expect(publish).toHaveBeenLastCalledWith(null);
-    expect(write).not.toHaveBeenCalled();
+    expect(write.mock.calls).toEqual([[null]]);
+  });
+
+  it("retries the same selection after a rejected write", async () => {
+    const write = vi
+      .fn<(key: string | null) => Promise<void>>()
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+      .mockResolvedValue(undefined);
+    const store = createActiveSpaceKeyStore({ read: async () => null, write, publish: () => {} });
+    await store.set("env:k");
+    await store.set("env:k");
+    expect(write.mock.calls).toEqual([["env:k"], ["env:k"]]);
   });
 
   it("continues persisting selections after a rejected write", async () => {
