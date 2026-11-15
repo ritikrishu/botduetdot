@@ -85,7 +85,12 @@ previous directory.
 
 If your Xcode account only has a Personal Team, use a bundle identifier you control and opt into the
 reduced-capability local build. Personal Team builds omit the widget and share extensions, push
-entitlement, and native Sign in with Apple entitlement; builds without this opt-in are unchanged.
+entitlement, native Sign in with Apple entitlement, and Associated Domains. Set
+`T3CODE_IOS_PERSONAL_TEAM_ID` to your Apple team ID (surrounding whitespace is trimmed), or leave
+it unset to let Expo offer its signing-team picker. OTA updates are off by default for Personal
+Team builds; only `T3CODE_MOBILE_UPDATES_ENABLED=1` opts back in. Before enabling updates for a
+fork, configure your own update project to avoid loading T3's JavaScript bundle. Builds without
+the Personal Team opt-in are unchanged.
 
 ```bash
 T3CODE_IOS_PERSONAL_TEAM=1 \
@@ -99,13 +104,23 @@ Build and install a self-contained Release app that does not need Metro:
 vp run ios:release
 ```
 
-The Personal Team equivalent also needs a unique bundle identifier:
+For daily Personal Team use next to the App Store app, use `APP_VARIANT=preview`. Do not use
+`production` or `ios:release`: their `t3code` URL scheme and `T3 Code` name clash with the store
+app even with a unique bundle identifier. From `apps/mobile`, replace `com.example` with your
+own reverse-DNS prefix (for example, `com.<you>`) and `<udid>` with your iPhone's UDID:
 
 ```bash
-T3CODE_IOS_PERSONAL_TEAM=1 \
-T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.t3code \
-vp run ios:release
+(
+  export APP_VARIANT=preview T3CODE_IOS_PERSONAL_TEAM=1
+  export T3CODE_IOS_PERSONAL_TEAM_BUNDLE_ID=com.example.t3code.preview EXPO_NO_GIT_STATUS=1
+  vp exec expo prebuild --clean --platform ios &&
+    vp exec expo run:ios --configuration Release --device "<udid>" --no-bundler
+)
 ```
+
+The subshell keeps the same variant and signing configuration for both commands. This Release
+app runs without Metro and can connect directly to your server over LAN or Tailscale with
+T3 Connect left off.
 
 Build and run the local iOS preview app:
 
