@@ -185,6 +185,9 @@ function SpaceEditorForm({
                   disabled={!editable || busy}
                   onChange={(event) => setName(event.target.value)}
                 />
+                {trimmedName.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Enter a name.</p>
+                ) : null}
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor={`${id}-emoji`}>Emoji (up to two)</Label>
