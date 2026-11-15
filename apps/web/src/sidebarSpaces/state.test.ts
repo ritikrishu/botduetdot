@@ -1,4 +1,4 @@
-import { EnvironmentId, type SidebarSpace } from "@t3tools/contracts";
+import { DEFAULT_SERVER_SETTINGS, EnvironmentId, type SidebarSpace } from "@t3tools/contracts";
 import * as Cause from "effect/Cause";
 import { AsyncResult } from "effect/reactivity";
 import { describe, expect, it, vi } from "vite-plus/test";
@@ -52,7 +52,7 @@ function setup(initialSpaces: ReadonlyArray<SidebarSpace>) {
   mocks.toast.mockReset();
 
   const persisted = new Map<EnvironmentId, ReadonlyArray<SidebarSpace>>();
-  const deferWrite = () => {
+  const deferWrite = (acknowledgedSpaces?: ReadonlyArray<SidebarSpace>) => {
     const started = deferred<SettingsWrite>();
     const completed = deferred<boolean>();
     mocks.updateSettings.mockImplementationOnce(async (write: SettingsWrite) => {
@@ -60,8 +60,9 @@ function setup(initialSpaces: ReadonlyArray<SidebarSpace>) {
       if (!(await completed.promise)) {
         return AsyncResult.failure(Cause.fail(new Error("Save rejected")));
       }
-      persisted.set(write.environmentId, write.input.patch.sidebarSpaces);
-      return AsyncResult.success(undefined);
+      const sidebarSpaces = acknowledgedSpaces ?? write.input.patch.sidebarSpaces;
+      persisted.set(write.environmentId, sidebarSpaces);
+      return AsyncResult.success({ ...DEFAULT_SERVER_SETTINGS, sidebarSpaces });
     });
     return { started: started.promise, complete: completed.resolve };
   };
@@ -94,14 +95,45 @@ describe("useSidebarSpaceWriter", () => {
     expect(secondPatch.input.patch.sidebarSpaces).toEqual([base, first, second]);
     expect(persisted.get(environmentId)).toEqual([base, first, second]);
 
-    mocks.readSettings.mockReturnValue({ sidebarSpaces: [base, first, second, external] });
+    mocks.readSettings.mockReturnValue({ sidebarSpaces: [base, first, external] });
     const removeWrite = deferWrite();
     const remove = firstWriter.remove(`${environmentId}:base`);
     await removeWrite.started;
     removeWrite.complete(true);
     expect(await remove).toBe(true);
-    expect(persisted.get(environmentId)).toEqual([first, second, external]);
+    expect(persisted.get(environmentId)).toEqual([first, external]);
   });
+
+  it.each([false, true])(
+    "preserves acknowledged saves after draining (push before acknowledgement: %s)",
+    async (pushBeforeAcknowledgement) => {
+      const environmentId = EnvironmentId.make(`drained-save-${pushBeforeAcknowledgement}`);
+      const base = space("base");
+      const first = space("first");
+      const acknowledgedFirst = { ...first, name: "Server-confirmed first" };
+      const second = space("second");
+      const { persisted, deferWrite } = setup([base]);
+      const firstWrite = deferWrite([base, acknowledgedFirst]);
+      const firstWriter = useSidebarSpaceWriter();
+      const firstSave = firstWriter.save(first, environmentId);
+      await firstWrite.started;
+      if (pushBeforeAcknowledgement) {
+        mocks.readSettings.mockReturnValue({ sidebarSpaces: [base] });
+      }
+      firstWrite.complete(true);
+      expect(await firstSave).toBe(true);
+
+      const secondWrite = deferWrite();
+      const secondWriter = useSidebarSpaceWriter();
+      const secondSave = secondWriter.save(second, environmentId);
+      const secondPatch = await secondWrite.started;
+      secondWrite.complete(true);
+      expect(await secondSave).toBe(true);
+
+      expect(secondPatch.input.patch.sidebarSpaces).toEqual([base, acknowledgedFirst, second]);
+      expect(persisted.get(environmentId)).toEqual([base, acknowledgedFirst, second]);
+    },
+  );
 
   it("keeps the last successful list when a queued write fails", async () => {
     const environmentId = EnvironmentId.make("failed-save");

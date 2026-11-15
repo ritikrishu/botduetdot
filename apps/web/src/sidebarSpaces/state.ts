@@ -13,7 +13,12 @@ import {
   isAtomCommandInterrupted,
   squashAtomCommandFailure,
 } from "@t3tools/client-runtime/state/runtime";
-import { AuthSettingsWriteScope, type EnvironmentId, type SidebarSpace } from "@t3tools/contracts";
+import {
+  AuthSettingsWriteScope,
+  type EnvironmentId,
+  type ServerSettings,
+  type SidebarSpace,
+} from "@t3tools/contracts";
 import * as Schema from "effect/Schema";
 
 import { toastManager } from "../components/ui/toast";
@@ -95,6 +100,11 @@ const sidebarSpaceWriteQueues = new Map<
   { tail: Promise<void>; spaces: ReadonlyArray<SidebarSpace> | undefined }
 >();
 
+const sidebarSpaceAcknowledgements = new Map<
+  EnvironmentId,
+  { spaces: ReadonlyArray<SidebarSpace>; settings: ServerSettings | null }
+>();
+
 function enqueueSidebarSpaceUpdate(
   environmentId: EnvironmentId,
   update: (
@@ -160,13 +170,28 @@ export function useSidebarSpaceWriter(): {
         });
         return undefined;
       }
-      // The settings stream may lag behind successful writes in this queue.
-      const sidebarSpaces = transform(lastSuccessfulSpaces ?? settings.sidebarSpaces);
+      let acknowledged = sidebarSpaceAcknowledgements.get(environmentId);
+      if (acknowledged !== undefined && acknowledged.settings !== settings) {
+        sidebarSpaceAcknowledgements.delete(environmentId);
+        acknowledged = undefined;
+      }
+      // The settings stream may lag behind successful writes even after the queue drains.
+      const sidebarSpaces = transform(
+        lastSuccessfulSpaces ?? acknowledged?.spaces ?? settings.sidebarSpaces,
+      );
       const result = await persist({
         environmentId,
         input: { patch: { sidebarSpaces } },
       });
-      if (result._tag === "Failure" && !isAtomCommandInterrupted(result)) {
+      if (result._tag === "Success") {
+        const spaces = result.value.sidebarSpaces;
+        sidebarSpaceAcknowledgements.set(environmentId, {
+          spaces,
+          settings: appAtomRegistry.get(serverEnvironment.settingsValueAtom(environmentId)),
+        });
+        return spaces;
+      }
+      if (!isAtomCommandInterrupted(result)) {
         const error = squashAtomCommandFailure(result);
         toastManager.add({
           type: "error",
@@ -174,7 +199,7 @@ export function useSidebarSpaceWriter(): {
           description: `Could not save on ${label}: ${error instanceof Error ? error.message : "The save failed. Try reconnecting and saving again."}`,
         });
       }
-      return result._tag === "Success" ? sidebarSpaces : undefined;
+      return undefined;
     });
 
   return {
