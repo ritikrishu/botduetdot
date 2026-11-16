@@ -122,6 +122,22 @@ The prerelease-shaped version's behavior in electron-updater remains a release g
 `--mock-updates` and `vp run start:mock-update-server` before promising updates. Bundled upstream-profile
 elimination is also unverified until scans pass. Windows, Linux, Intel Mac and standalone iOS are outside v1.
 
+## Test a build on your Mac before publishing
+
+Run the app against a throwaway home so your real data is never touched:
+`T3CODE_HOME="$(mktemp -d)/home" /Applications/BotDuetDot.app/Contents/MacOS/BotDuetDot`. BotDuetDot
+keeps its data in `~/.botduetdot` and `~/Library/Application Support/botduetdot`, separate from T3
+Code's `~/.t3` and `t3code-v2`, so both apps can run side by side.
+
+To test `botduetdot://` links, install the app into `/Applications` (or another normal folder) first.
+macOS ignores URL handlers inside temporary folders and inside disk images mounted without a Finder
+window, so links opened from there report that no application can open them.
+
+On first launch the desktop server checks GitHub for BotDuetDot updates and reads the public release
+channels of supported AI tools (for example `downloads.claude.ai` and `api.meta.ai`) to offer CLI
+updates; Settings → Maintenance → Provider update checks turns the latter off. It never contacts
+`*.t3.codes`, Expo, npm or the upstream GitHub owner.
+
 ## Publish and promote
 
 After verification, rerun the desktop wrapper with the same version and `--publish` using T7's
