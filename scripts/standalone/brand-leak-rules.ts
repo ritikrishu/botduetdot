@@ -330,12 +330,9 @@ export const BARE_NAME_COUNTS = [
   ),
 ] as readonly (readonly [RegExp, number])[];
 
-// The merged manifest of a real 0.1.9-botduetdot.1 AAB, reviewed 2026-11-16. Runtime prompts:
-// CAMERA (QR pairing), RECORD_AUDIO (voice input), POST_NOTIFICATIONS. The rest are install-time
-// permissions from Expo and React Native libraries: network state, biometric unlock, scheduled and
-// promoted notifications, launcher badges (ShortcutBadger) and androidx's receiver guard. FCM push
-// and the Play install referrer are blocked in apps/mobile/brand.config.ts. Any new library
-// permission fails this gate until reviewed.
+// Reviewed merged manifest of the 0.1.9-botduetdot.1 AAB: runtime prompts are camera, microphone
+// and notifications; the rest are library install-time permissions. Push and the install referrer
+// are blocked in apps/mobile/brand.config.ts; a new permission fails until reviewed.
 export const ANDROID_PERMISSIONS = [
   "android.permission.ACCESS_NETWORK_STATE",
   "android.permission.ACCESS_WIFI_STATE",
