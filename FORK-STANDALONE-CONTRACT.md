@@ -199,6 +199,18 @@ first-impression branding; **P2** = cosmetic or rare path.
 - `apps/marketing` (t3.codes site), `infra/relay`, `infra/task-cache`, `packaging/aur`, hosted web deploy: **OUT**.
 - `.github/workflows/*`: upstream pipelines are gated to `pingdotgg/t3code` (`release.yml:53`, `publish-aur.yml:40`, `mobile-eas-production.yml:77`, `deploy-relay.yml:29`, …) and use Blacksmith runners, task cache, Vercel, Discord, a release GitHub App and the relay config. **Not reusable**; Actions are currently **enabled** on `ritikrishu/botduetdot` (§7).
 - `LICENSE` (MIT, "Copyright (c) 2026 T3 Tools Inc."): KEEP unchanged. In-app license screens omit first-party `@t3tools/*` packages (`docs/internals/open-source-licenses.md`), so add the notice (S34) and About credits (S36).
+  **r7 amendment (orchestrator, from the T2a review):** `features.t3Connect === false` must make the whole
+  T3 Connect runtime inert, not just the public config: `CloudLink` (startup reconciliation of persisted
+  tunnel/relay state, `applyRelayConfig`, `linkProof`, `updatePreferences`, `answerHealthRequest`,
+  `mintCredential`, shutdown release), `cloud/config.ts` `readRelayConnection` and
+  `relay/AgentAwarenessRelay.ts` `readRelayConfig` (return `null`), so a standalone server never contacts a
+  relay or starts a tunnel even with persisted relay secrets present, and refuses cloud-HTTP writes.
+  **Inert must be non-destructive:** never read-apply, write or clear persisted relay/tunnel secrets in
+  standalone (a home shared with the official app must keep its T3 Connect state). Brand tests seed the
+  persisted secrets and assert zero HTTP requests, no connector start, no secret writes or deletions;
+  upstream unchanged. Also: CLI launcher names from `BRAND.cliName` (`cli/install.ts`); boot-service unit
+  name from `BOOT_SERVICE_UNIT_FILE` (`cli/update.ts:326`, `cloud/bootService.ts:482`). T2a ownership is
+  extended to these files.
   **r6 amendment (orchestrator, from T2a):** disabling triage needs a service-level gate too: the RPC
   handler (`apps/server/src/ws.ts:2745`) calls `TriageService.prepare` directly and authorization checks
   scopes, not capabilities. `TriageService.prepare` (`apps/server/src/triage/TriageService.ts:190`) must
