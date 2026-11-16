@@ -238,15 +238,21 @@ export function scanCollection(
       );
   }
   for (const file of files) {
-    const derived = DERIVED_CACHE_SCOPE.test(file.scope);
+    const countBare = !bareCounts.some(([scope]) => scope.test(file.scope));
+    if (DERIVED_CACHE_SCOPE.test(file.scope)) {
+      // Several exemptions share a literal across chunk scopes; blank each once, longest first.
+      let text = file.text;
+      for (const literal of [...new Set(permitted.map((item) => item.literal))].toSorted(
+        (left, right) => right.length - left.length,
+      ))
+        text = text.replaceAll(literal, " ".repeat(literal.length));
+      findings.push(...scanText({ ...file, text }, [], countBare));
+      continue;
+    }
     const local = permitted
-      .filter((item) => derived || item.scope.test(file.scope))
-      .map((item) => ({
-        ...item,
-        ...(derived ? { scope: DERIVED_CACHE_SCOPE, text: true as const } : {}),
-        count: file.text.split(item.literal).length - 1,
-      }));
-    findings.push(...scanText(file, local, !bareCounts.some(([scope]) => scope.test(file.scope))));
+      .filter((item) => item.scope.test(file.scope))
+      .map((item) => ({ ...item, count: file.text.split(item.literal).length - 1 }));
+    findings.push(...scanText(file, local, countBare));
   }
   return findings;
 }

@@ -149,6 +149,14 @@ describe("artifact leak rules", () => {
       javascript: false,
     });
     const source = js(exemption.literal, "apps/server/dist/server.mjs");
+    const sibling = { ...exemption, scope: /main\.cjs$/ };
+    expect(
+      scanCollection(
+        [source, js(exemption.literal, "dist-electron/main.cjs"), cache(exemption.literal)],
+        [exemption, sibling],
+        [],
+      ),
+    ).toEqual([]);
     expect(
       scanCollection(
         [source, cache(`\x00${exemption.literal}\x00${exemption.literal}`)],
