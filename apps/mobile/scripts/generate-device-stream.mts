@@ -3,13 +3,22 @@ import * as NodePath from "node:path";
 import * as NodeURL from "node:url";
 import { build } from "vite-plus";
 
+import { brandBuildDefine } from "../../../scripts/lib/brand-define.ts";
+import { brandTextPlugins } from "../../../scripts/lib/brand-text.ts";
+
 const mobileRoot = NodePath.resolve(NodePath.dirname(NodeURL.fileURLToPath(import.meta.url)), "..");
+// Standalone WebView scripts get the same brand profile and copy as the other bundles.
+const brandBuildOptions =
+  process.env.T3CODE_BRAND === "standalone"
+    ? { define: brandBuildDefine(process.env), plugins: brandTextPlugins(process.env) }
+    : {};
 
 async function generateWebViewScript(feature: string, name: string) {
   const stem = `${name.toLowerCase()}-stream`;
   const result = await build({
     configFile: false,
     logLevel: "silent",
+    ...brandBuildOptions,
     build: {
       write: false,
       target: "es2022",

@@ -11,6 +11,18 @@ const env = {
 };
 const require = NodeModule.createRequire(import.meta.url);
 
+// A root test run loads upstream VITE_* defaults; a release environment never carries them.
+function expoEnv(variant: string): NodeJS.ProcessEnv {
+  const childEnv: NodeJS.ProcessEnv = {
+    ...process.env,
+    ...env,
+    APP_VARIANT: variant,
+    EXPO_NO_DOTENV: "1",
+  };
+  for (const key of Object.keys(childEnv)) if (key.startsWith("VITE_")) childEnv[key] = undefined;
+  return childEnv;
+}
+
 it.each(["development", "preview", "production"] as const)(
   "removes EAS metadata after Expo evaluates all plugins for standalone %s",
   (variant) => {
@@ -19,15 +31,7 @@ it.each(["development", "preview", "production"] as const)(
       [require.resolve("expo/bin/cli"), "config", "--type", "public", "--json"],
       {
         cwd: import.meta.dirname,
-        // A root test run loads upstream VITE_* defaults; a release environment never carries them.
-        env: {
-          ...Object.fromEntries(
-            Object.entries(process.env).filter(([key]) => !key.startsWith("VITE_")),
-          ),
-          ...env,
-          APP_VARIANT: variant,
-          EXPO_NO_DOTENV: "1",
-        },
+        env: expoEnv(variant),
         encoding: "utf8",
       },
     );

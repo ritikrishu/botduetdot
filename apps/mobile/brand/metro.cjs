@@ -14,6 +14,10 @@ function withMobileBrandResolver(config, brand = process.env.T3CODE_BRAND) {
       path.join(mobileRoot, "src/components/brandAssets.ts"),
       path.join(__dirname, "assets.standalone.ts"),
     ],
+    [
+      path.resolve(mobileRoot, "../../packages/contracts/src/brandProfiles.ts"),
+      path.join(__dirname, "brandProfiles.standalone.ts"),
+    ],
   ]);
   const resolveRequest = config.resolver.resolveRequest;
   config.resolver.resolveRequest = (context, moduleName, platform) => {

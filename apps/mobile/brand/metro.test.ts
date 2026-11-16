@@ -48,6 +48,10 @@ it("removes Observe entry points and T3 asset modules from standalone resolution
     type: "sourceFile",
     filePath: NodePath.join(import.meta.dirname, "assets.standalone.ts"),
   });
+  expect(resolve(context, "../../packages/contracts/src/brandProfiles.ts", "android")).toEqual({
+    type: "sourceFile",
+    filePath: NodePath.join(import.meta.dirname, "brandProfiles.standalone.ts"),
+  });
   expect(resolve(context, "src/App.tsx", "android")).toEqual({
     type: "sourceFile",
     filePath: NodePath.join(mobileRoot, "src/App.tsx"),
@@ -61,4 +65,14 @@ it("chains an existing resolver when selecting standalone modules", () => {
   expect(config.resolver!.resolveRequest!(context, "elsewhere", "ios")).toEqual({ type: "empty" });
   expect(previous).toHaveBeenCalledWith(context, "elsewhere", "ios");
   expect(resolveRequest).not.toHaveBeenCalled();
+});
+
+it("ships only the standalone profile and resolves a missing id to it", async () => {
+  const profiles = await import("./brandProfiles.standalone.ts");
+  const { STANDALONE_BRAND } = await import("../../../packages/contracts/src/brandProfiles.ts");
+  expect(profiles.STANDALONE_BRAND).toEqual(STANDALONE_BRAND);
+  expect(profiles.resolveBrandProfile(undefined)).toBe(profiles.STANDALONE_BRAND);
+  expect(profiles.resolveBrandProfile("standalone")).toBe(profiles.STANDALONE_BRAND);
+  expect(() => profiles.resolveBrandProfile("upstream")).toThrow("only the standalone brand");
+  expect(profiles).not.toHaveProperty("UPSTREAM_BRAND");
 });

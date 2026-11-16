@@ -1,4 +1,15 @@
+import { BRAND, brandAppSchemes } from "@t3tools/contracts/brand";
 import type { NavigationState, PartialState } from "@react-navigation/native";
+
+/** A launch through the bare app scheme, with no route to open. */
+const BARE_SCHEME_LAUNCH =
+  BRAND.id === "upstream"
+    ? /^t3code(-dev|-preview)?:\/*$/
+    : new RegExp(
+        `^(?:${brandAppSchemes(BRAND)
+          .map((scheme) => scheme.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+          .join("|")}):\\/*$`,
+      );
 
 /**
  * The Expo dev client launches the app via
@@ -12,7 +23,7 @@ export function shouldHandleAppLink(url: string, cloudConfigured: boolean): bool
   return (
     !route.includes("expo-development-client") &&
     !route.includes("://expo-sharing") &&
-    !/^t3code(-dev|-preview)?:\/*$/.test(url) &&
+    !BARE_SCHEME_LAUNCH.test(url) &&
     (cloudConfigured || !CLOUD_ONLY_LINK_PATH.test(route))
   );
 }
