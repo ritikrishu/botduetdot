@@ -32,10 +32,27 @@ export function isBrandTextSource(id: string, root = repoRoot): boolean {
   return relative !== undefined && !Object.hasOwn(BRAND_TEXT_EXCLUSIONS, relative);
 }
 
-// The space rules out identifiers. Replacing source also covers regexes, nested generated code,
-// templates and JSX without changing newlines; both shipped names contain no syntax delimiters.
+// Subcommands of the CLI whose launcher standalone installs as BRAND.cliName.
+const CLI_SUBCOMMANDS =
+  "app|auth|browser|config|connect|doctor|down|environment|install|pair|policy|project|serve|service|status|theme|thread|trace|triage|uninstall|up|update";
+// "T3 Code" contains a space, so it cannot be an identifier. Replacing source also covers regexes,
+// nested generated code, templates and JSX without changing newlines; neither shipped name contains
+// syntax delimiters. The CLI name is renamed only as quoted copy: `t3` alone or `t3 <subcommand>`,
+// never other template text such as the git message `t3 checkpoint ref=…`.
+const BRAND_TEXT_PATTERN = new RegExp(`T3 Code|(?<=\`)t3(?=\`| (?:${CLI_SUBCOMMANDS})\\b)`, "g");
+
+function replacementFor(match: string, brand: BrandProfile): string {
+  return match === "T3 Code" ? brand.name : brand.cliName;
+}
+
+export function hasBrandText(code: string): boolean {
+  return new RegExp(BRAND_TEXT_PATTERN.source).test(code);
+}
+
 export function rewriteBrandText(code: string, brand: BrandProfile): string {
-  return brand.id === "upstream" ? code : code.replaceAll("T3 Code", () => brand.name);
+  return brand.id === "upstream"
+    ? code
+    : code.replace(BRAND_TEXT_PATTERN, (match) => replacementFor(match, brand));
 }
 
 function blankText(text: string): string {
@@ -74,27 +91,33 @@ function vlq(value: number): string {
   return result;
 }
 
-// A column mapping for every UTF-16 code unit keeps positions after longer replacements exact.
+// A column mapping for every UTF-16 code unit keeps positions exact after replacements of any length.
 function rewriteWithMap(code: string, id: string, brand: BrandProfile) {
   let previousColumn = 0;
   const mappings = code
     .split("\n")
     .map((line, lineIndex) => {
+      const replacements = new Map<number, { length: number; text: string }>();
+      for (const match of line.matchAll(BRAND_TEXT_PATTERN))
+        replacements.set(match.index, {
+          length: match[0].length,
+          text: replacementFor(match[0], brand),
+        });
       const segments: string[] = [];
       let generatedColumn = 0;
       let lastGeneratedColumn = 0;
       for (let column = 0; column <= line.length; column++) {
-        const replaced = line.startsWith("T3 Code", column);
-        const width = replaced ? brand.name.length : 1;
+        const replaced = replacements.get(column);
+        const width = replaced ? replaced.text.length : 1;
         for (let index = 0; index < width; index++) {
-          const originalColumn = column + (replaced ? Math.min(index, 6) : 0);
+          const originalColumn = column + (replaced ? Math.min(index, replaced.length - 1) : 0);
           segments.push(
             `${vlq(generatedColumn - lastGeneratedColumn)}A${lineIndex > 0 && column === 0 && index === 0 ? "C" : "A"}${vlq(originalColumn - previousColumn)}`,
           );
           lastGeneratedColumn = generatedColumn++;
           previousColumn = originalColumn;
         }
-        if (replaced) column += 6;
+        if (replaced) column += replaced.length - 1;
       }
       return segments.join(",");
     })
@@ -114,7 +137,7 @@ export function brandTextPlugin(brand: BrandProfile, root = repoRoot) {
       const prepared = prepareOfficialBrandSource(code, id, brand, root);
       // The official-product omissions preserve every column and newline.
       if (prepared !== code) return { code: prepared, map: null };
-      if (!isBrandTextSource(id, root) || !code.includes("T3 Code")) return;
+      if (!isBrandTextSource(id, root) || !hasBrandText(code)) return;
       return rewriteWithMap(code, id, brand);
     },
   } satisfies Plugin;

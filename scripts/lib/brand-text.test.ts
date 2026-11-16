@@ -39,6 +39,24 @@ describe("bundle-time brand text", () => {
     );
   });
 
+  it("renames the CLI only in quoted copy for its real subcommands", () => {
+    const copy =
+      'm("Run `t3 service install`; the `t3` launcher"); n(`Run \\`t3 update --channel x\\`.`);';
+    expect(rewriteBrandText(copy, STANDALONE_BRAND)).toBe(
+      'm("Run `botduetdot service install`; the `botduetdot` launcher"); n(`Run \\`botduetdot update --channel x\\`.`);',
+    );
+    for (const kept of [
+      "const message = `t3 checkpoint ref=${ref}`;",
+      "log(`t3 and its background service are current`);",
+      'x("`t3 uploads`"); const t3 = 1; "t3code.preferences"; `${t3} service`;',
+    ])
+      expect(rewriteBrandText(kept, STANDALONE_BRAND)).toBe(kept);
+    expect(rewriteBrandText(copy, UPSTREAM_BRAND)).toBe(copy);
+    expect(transform('const hint = "Run `t3 up` first";')?.code).toBe(
+      'const hint = "Run `botduetdot up` first";',
+    );
+  });
+
   it("limits rewriting to repository source, including queries and Windows paths", () => {
     for (const path of [
       "apps/web/src/a.tsx",
@@ -69,7 +87,8 @@ describe("bundle-time brand text", () => {
   });
 
   it("keeps original UTF-16 columns and lines after multiple replacements", () => {
-    const source = 'const a = "😀 T3 Code"; const b = "T3 Code";\r\n\nthrow new Error("T3 Code");';
+    const source =
+      'const a = "😀 T3 Code"; const b = "`t3 up` T3 Code";\r\n\nthrow new Error("`t3` T3 Code");';
     const result = transform(source)!;
     const map = new NodeModule.SourceMap({ ...result.map!, file: filename, sourceRoot: "" });
     const before = source.split("\n");
