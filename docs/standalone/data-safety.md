@@ -28,8 +28,13 @@ the owner must confirm that interpretation and any demo-server handling before s
 
 The contract's conservative draft marked every content type required. Photos/files/audio are optional
 in this draft because users can choose not to attach/record them; validate the final Console choices.
-Camera access for QR scanning is not a claim that camera footage is uploaded. Review the merged
-manifest for unnecessary overlay/storage permissions and the final SDK behavior before submission.
+Camera access for QR scanning is not a claim that camera footage is uploaded. The merged manifest
+of the first release AAB was reviewed on 2026-11-16. Runtime prompts are camera (QR pairing),
+microphone (voice input) and notifications. The remaining permissions are install-time ones from
+Expo and React Native libraries: network state, biometric unlock, scheduled and promoted
+notifications, launcher badges. Overlay, external storage, FCM push and the Play install referrer
+are blocked. `scripts/standalone/brand-leak-rules.ts` pins this set, so a new library permission
+fails the release check until reviewed.
 
 ## Opt-in analytics and telemetry exports
 
