@@ -228,6 +228,7 @@ part of this inventory. Refresh both tables after integration and each upgrade.
 Track upstream **release tags, not `main`**, to use a known database version. Matching a release avoids deliberately taking
 unreleased migrations; it does not make downgrades safe. Test each upgrade on a copied home first.
 Releases belong to `github.com/ritikrishu/botduetdot`; upstream is `github.com/pingdotgg/t3code`.
+The fork's default branch is `botduetdot`; its `main` only mirrors upstream `main` and is never released.
 Check `git remote -v`: older checkouts may still name the fork `ritikrishu/t3code`.
 
 From a clean fork checkout, replace `vX.Y.Z` with the target release:
@@ -235,7 +236,7 @@ From a clean fork checkout, replace `vX.Y.Z` with the target release:
 ```bash
 git fetch upstream --tags
 git config rerere.enabled true
-git switch -c sync/vX.Y.Z feat/standalone-app
+git switch -c sync/vX.Y.Z botduetdot
 git merge vX.Y.Z
 ```
 
