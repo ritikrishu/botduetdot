@@ -42,7 +42,7 @@ export function defineStandaloneBrand(): BrandProfile {
       mobileApp: androidStore,
       androidStore,
       iosStore: null,
-      issues: `${repositoryUrl}/issues`,
+      issues: `${repositoryUrl}/issues/new`,
       installSh: null,
       installPs1: null,
     },

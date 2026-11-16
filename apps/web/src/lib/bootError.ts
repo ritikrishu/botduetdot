@@ -236,7 +236,7 @@ function mountUpdateButton(
           : undefined;
     run?.then(
       (result) => render(result.state),
-      (error: unknown) => console.warn("Could not update T3 Code.", error),
+      (error: unknown) => console.warn(`Could not update ${BRAND.name}.`, error),
     );
   });
   // A pushed state is newer than the initial read, so the read must not overwrite it.
@@ -355,13 +355,11 @@ export function showBootError(error: unknown) {
   );
 
   const issue = new URL(ISSUE_URL);
-  if (BRAND.features.triage) {
-    issue.searchParams.set("template", "bug_report.yml");
-    issue.searchParams.set("title", `${BRAND.name} failed to start`);
-    issue.searchParams.set("area", "apps/web");
-    issue.searchParams.set("version", `${environment.version} (${environment.channel})`);
-    issue.searchParams.set("environment", `${environment.surface}, ${environment.platform}`);
-  }
+  issue.searchParams.set("template", "bug_report.yml");
+  issue.searchParams.set("title", `${BRAND.name} failed to start`);
+  issue.searchParams.set("area", "apps/web");
+  issue.searchParams.set("version", `${environment.version} (${environment.channel})`);
+  issue.searchParams.set("environment", `${environment.surface}, ${environment.platform}`);
   const link = (href: string, textContent: string) =>
     element("a", { href, textContent, target: "_blank", rel: "noreferrer" });
   const nightly = environment.channel === "nightly";

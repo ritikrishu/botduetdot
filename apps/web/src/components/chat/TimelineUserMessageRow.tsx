@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import { InlineAudioPreview } from "../files/InlineAudioPreview";
 import { filePreviewKind } from "@t3tools/shared/filePreview";
 import { remarkEnableOrderedListNumbers } from "@t3tools/shared/markdownPipeline";
@@ -837,7 +838,7 @@ function UserTimelineRow({ row }: { row: Extract<TimelineRow, { kind: "message" 
           className="me-1 text-2xs text-muted-foreground/70"
           data-user-message-attribution="t3code"
         >
-          Sent by T3 Code
+          {`Sent by ${BRAND.name}`}
         </p>
       ) : null}
       {/* The row's heading already names the guest for screen readers. */}

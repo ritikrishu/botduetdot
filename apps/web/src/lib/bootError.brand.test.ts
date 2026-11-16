@@ -38,17 +38,19 @@ describe.each(["upstream", "standalone"] as const)("%s boot recovery", (id) => {
       const command = nodes.find((node) => node.tag === "code");
       const issue = nodes.find((node) => node.textContent === "File a bug report on GitHub")!;
       const text = nodes.map((node) => node.textContent).join(" ");
+      const url = new URL(String(issue.href));
+      expect(url.origin + url.pathname).toBe(brand.links.issues);
+      expect(url.searchParams.get("template")).toBe("bug_report.yml");
+      expect(url.searchParams.get("title")).toBe(`${brand.name} failed to start`);
+      expect(url.searchParams.get("area")).toBe("apps/web");
+      expect(url.searchParams.get("version")).toBeTruthy();
+      expect(url.searchParams.get("environment")).toContain("darwin");
       if (brand.features.triage) {
         expect(command?.textContent).toContain("npx t3 triage");
         expect(text).toContain("Your agent can check the local logs");
-        const url = new URL(String(issue.href));
-        expect(url.origin + url.pathname).toBe(brand.links.issues);
-        expect(url.searchParams.get("template")).toBe("bug_report.yml");
-        expect(url.searchParams.get("title")).toBe("T3 Code failed to start");
       } else {
         expect(command).toBeUndefined();
         expect(text).not.toMatch(/triage|Your agent can check|T3 Code/);
-        expect(issue.href).toBe(brand.links.issues);
         expect(getState).not.toHaveBeenCalled();
       }
     } finally {

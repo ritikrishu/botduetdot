@@ -170,7 +170,7 @@ describe("brand profiles", () => {
         mobileApp: "https://play.google.com/store/apps/details?id=com.ritikrishu.botduetdot",
         androidStore: "https://play.google.com/store/apps/details?id=com.ritikrishu.botduetdot",
         iosStore: null,
-        issues: "https://github.com/ritikrishu/botduetdot/issues",
+        issues: "https://github.com/ritikrishu/botduetdot/issues/new",
         installSh: null,
         installPs1: null,
       },
