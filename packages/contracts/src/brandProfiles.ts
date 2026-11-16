@@ -63,7 +63,14 @@ export interface BrandProfile {
     readonly assetDir: string | null;
   };
   readonly service: { readonly launchdLabel: string; readonly systemdUnitName: string };
-  readonly managedPolicy: { readonly macDomain: string; readonly windowsSubkey: string };
+  readonly managedPolicy: {
+    readonly macDomain: string;
+    readonly windowsSubkey: string;
+    /** Policy file folder under /Library/Application Support (macOS) and Program Files (Windows). */
+    readonly fileDirName: string;
+    /** Policy file folder under /etc on Linux. */
+    readonly linuxDirName: string;
+  };
   readonly mobile: {
     readonly expoSlug: string;
     readonly appName: string;
@@ -151,6 +158,8 @@ function defineUpstreamBrand(): BrandProfile {
     managedPolicy: {
       macDomain: "com.t3tools.t3code",
       windowsSubkey: "SOFTWARE\\Policies\\T3Tools\\T3Code",
+      fileDirName: "T3Code",
+      linuxDirName: "t3code",
     },
     mobile: {
       expoSlug: "t3-code",

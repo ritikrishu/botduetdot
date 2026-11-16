@@ -112,6 +112,9 @@ describe("brand profiles", () => {
       managedPolicy: {
         macDomain: "com.t3tools.t3code",
         windowsSubkey: "SOFTWARE\\Policies\\T3Tools\\T3Code",
+        // packages/shared/src/managedPolicyFile.ts:40,44,46
+        fileDirName: "T3Code",
+        linuxDirName: "t3code",
       },
       mobile: {
         // apps/mobile/app.config.ts:237
@@ -202,6 +205,8 @@ describe("brand profiles", () => {
       managedPolicy: {
         macDomain: "com.ritikrishu.botduetdot",
         windowsSubkey: "SOFTWARE\\Policies\\ritikrishu\\BotDuetDot",
+        fileDirName: "BotDuetDot",
+        linuxDirName: "botduetdot",
       },
       mobile: {
         expoSlug: "botduetdot",

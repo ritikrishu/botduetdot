@@ -37,13 +37,13 @@ export class ManagedPolicyFileError extends Schema.TaggedError<ManagedPolicyFile
 export function managedPolicyPath(platform: NodeJS.Platform): string {
   switch (platform) {
     case "darwin":
-      return "/Library/Application Support/T3Code/policy.json";
+      return `/Library/Application Support/${BRAND.managedPolicy.fileDirName}/policy.json`;
     case "win32":
       // Not ProgramData, where a user can create the folder first and own it; and not
       // %ProgramFiles%, which a user can point somewhere they write.
-      return "C:\\Program Files\\T3Code\\policy.json";
+      return `C:\\Program Files\\${BRAND.managedPolicy.fileDirName}\\policy.json`;
     default:
-      return "/etc/t3code/policy.json";
+      return `/etc/${BRAND.managedPolicy.linuxDirName}/policy.json`;
   }
 }
 

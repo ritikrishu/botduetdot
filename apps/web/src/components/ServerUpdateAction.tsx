@@ -348,6 +348,15 @@ export function ServerUpdateAction({
     return <CrossTrackNote />;
   }
 
+  // Without an npm package, a server updates only with its desktop app; npm would fetch upstream.
+  if (selfUpdate === null && BRAND.npmPackage === null) {
+    return (
+      <span className="text-muted-foreground text-xs">
+        Update the desktop app on that machine to update this server.
+      </span>
+    );
+  }
+
   const manualCommand =
     selfUpdate === null ? manualServerUpdateCommand(targetVersion, installation) : null;
   const actionLabel =

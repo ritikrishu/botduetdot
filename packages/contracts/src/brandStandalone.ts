@@ -73,6 +73,8 @@ export function defineStandaloneBrand(): BrandProfile {
     managedPolicy: {
       macDomain: reverseDns,
       windowsSubkey: `SOFTWARE\\Policies\\${author}\\${name}`,
+      fileDirName: name,
+      linuxDirName: slug,
     },
     mobile: {
       expoSlug: slug,
