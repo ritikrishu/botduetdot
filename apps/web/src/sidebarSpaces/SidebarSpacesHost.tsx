@@ -5,6 +5,7 @@ import { resolveSidebarSpaceCommand } from "@t3tools/client-runtime/state/sideba
 import { registerCommands, type CommandHandlers } from "../shortcuts/dispatcher";
 import { closeSidebarSpaceEditor, useSidebarSpaceEditorRequest } from "./editorStore";
 import { SidebarSpaceEditorDialog } from "./SidebarSpaceEditorDialog";
+import { useJoinNewProjectsToActiveSpace } from "./useJoinNewProjectsToActiveSpace";
 import {
   activateSidebarSpace,
   readActiveSidebarSpaceKey,
@@ -16,6 +17,7 @@ export function SidebarSpacesHost() {
   const spaces = useSidebarSpaces();
   const enabled = useSidebarSpacesEnabled();
   const request = useSidebarSpaceEditorRequest();
+  useJoinNewProjectsToActiveSpace();
   // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- registers handlers with the external keyboard command dispatcher and unregisters on unmount
   useEffect(() => {
     const handlers: CommandHandlers = {};

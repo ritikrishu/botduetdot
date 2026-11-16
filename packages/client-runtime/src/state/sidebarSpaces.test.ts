@@ -14,12 +14,14 @@ import { describe, expect, it } from "vite-plus/test";
 import type { EnvironmentProject } from "./models.ts";
 import { buildProjectGroups, pickableProjectGroups } from "./projectGrouping.ts";
 import {
+  addSidebarSpaceProjectRefs,
   collectSidebarSpaces,
   createSidebarSpacesAtom,
   findSidebarSpace,
   homeEnvironmentForNewSidebarSpace,
   moveSidebarSpace,
   parseSidebarSpaceKey,
+  projectRefsJoiningActiveSpace,
   removeSidebarSpace,
   resolveSidebarSpaceCommand,
   resolveSidebarSpaceGroups,
@@ -511,4 +513,43 @@ it("retains the atom value across equal settings pushes and tracks membership an
     stop();
     registry.dispose();
   }
+});
+
+describe("projects created while a space is active", () => {
+  const environmentId = EnvironmentId.make("env-1");
+  const now = Date.parse("2026-11-17T02:00:00.000Z");
+  const project = (id: string, createdAt: string, extra: Partial<EnvironmentProject> = {}) =>
+    ({
+      environmentId,
+      id: ProjectId.make(id),
+      createdAt,
+      ...extra,
+    }) as unknown as EnvironmentProject;
+  const space: SidebarSpace = { id: "bots", name: "Bots", icon: "B", projectRefs: ["env-1:old"] };
+
+  it("joins only projects that just appeared and were just created", () => {
+    const known = new Set(["env-1:old", "env-1:existing"]);
+    const projects = [
+      project("old", "2026-11-16T00:00:00.000Z"),
+      project("existing", "2026-11-17T01:59:00.000Z"),
+      project("new", "2026-11-17T01:59:30.000Z"),
+      project("reappeared", "2026-11-01T00:00:00.000Z"),
+      project("scratch", "2026-11-17T01:59:50.000Z", { isScratch: true }),
+    ];
+    expect(projectRefsJoiningActiveSpace({ known, projects, space, now })).toEqual(["env-1:new"]);
+  });
+
+  it("does not repeat a project the space already has", () => {
+    const projects = [project("old", "2026-11-17T01:59:59.000Z")];
+    expect(projectRefsJoiningActiveSpace({ known: new Set(), projects, space, now })).toEqual([]);
+  });
+
+  it("adds refs to the named space only, without duplicates", () => {
+    const other: SidebarSpace = { id: "dev", name: "Dev", icon: "D", projectRefs: ["env-1:a"] };
+    expect(addSidebarSpaceProjectRefs([space, other], "bots", ["env-1:new", "env-1:old"])).toEqual([
+      { ...space, projectRefs: ["env-1:old", "env-1:new"] },
+      other,
+    ]);
+    expect(addSidebarSpaceProjectRefs([other], "missing", ["env-1:new"])).toEqual([other]);
+  });
 });

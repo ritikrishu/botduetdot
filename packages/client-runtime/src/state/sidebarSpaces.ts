@@ -9,6 +9,7 @@ import * as Equal from "effect/Equal";
 import { Atom } from "effect/reactivity";
 
 import { scopedProjectKey } from "../environment/scoped.ts";
+import type { EnvironmentProject } from "./models.ts";
 
 export type { SidebarSpace } from "@t3tools/contracts";
 
@@ -227,6 +228,44 @@ export function resolveSidebarSpaceCommand(input: {
   const slot = /^sidebar\.space\.([1-9])$/.exec(input.command)?.[1];
   const spaceKey = slot === undefined ? undefined : input.spaceKeys[Number(slot) - 1];
   return spaceKey === undefined ? null : { spaceKey };
+}
+
+// A project counts as created in the active space only if it is this recent when it first appears;
+// older ones that appear after a reconnect or a newly paired environment stay where they were.
+const JOIN_ACTIVE_SPACE_WINDOW_MS = 10 * 60_000;
+
+/**
+ * Projects created while a space is active join it, as an Arc tab stays in the space it was opened
+ * in. Scratch never joins, because its ref brings in every scratch thread.
+ */
+export function projectRefsJoiningActiveSpace(input: {
+  readonly known: ReadonlySet<string>;
+  readonly projects: ReadonlyArray<
+    Pick<EnvironmentProject, "environmentId" | "id" | "createdAt" | "isScratch">
+  >;
+  readonly space: Pick<SidebarSpace, "projectRefs">;
+  readonly now: number;
+}): string[] {
+  const members = new Set(input.space.projectRefs);
+  return input.projects.flatMap((project) => {
+    const key = scopedProjectKey({ environmentId: project.environmentId, projectId: project.id });
+    const fresh = input.now - Date.parse(project.createdAt) <= JOIN_ACTIVE_SPACE_WINDOW_MS;
+    return input.known.has(key) || members.has(key) || project.isScratch === true || !fresh
+      ? []
+      : [key];
+  });
+}
+
+export function addSidebarSpaceProjectRefs(
+  spaces: ReadonlyArray<SidebarSpace>,
+  spaceId: string,
+  refs: ReadonlyArray<string>,
+): SidebarSpace[] {
+  return spaces.map((space) =>
+    space.id === spaceId
+      ? { ...space, projectRefs: [...new Set([...space.projectRefs, ...refs])] }
+      : space,
+  );
 }
 
 export function homeEnvironmentForNewSidebarSpace(

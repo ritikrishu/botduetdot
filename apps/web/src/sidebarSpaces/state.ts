@@ -1,6 +1,7 @@
 import { useAtomValue } from "@effect/atom-react";
 import { pickableProjectGroups } from "@t3tools/client-runtime/state/project-grouping";
 import {
+  addSidebarSpaceProjectRefs,
   createSidebarSpacesAtom,
   moveSidebarSpace,
   parseSidebarSpaceKey,
@@ -210,6 +211,7 @@ export function useSidebarSpaceWriter(): {
   save(space: SidebarSpace, homeEnvironmentId: EnvironmentId): Promise<boolean>;
   remove(spaceKey: string): Promise<boolean>;
   move(spaceKey: string, direction: -1 | 1): Promise<boolean>;
+  join(spaceKey: string, projectRefs: ReadonlyArray<string>): Promise<boolean>;
 } {
   const { environments } = useEnvironments();
   const writableEnvironments = useEnvironmentsWithScope(environments, AuthSettingsWriteScope);
@@ -277,6 +279,14 @@ export function useSidebarSpaceWriter(): {
         ? false
         : update(parsed.homeEnvironmentId, (spaces) =>
             moveSidebarSpace(spaces, parsed.spaceId, direction),
+          );
+    },
+    join: async (spaceKey, projectRefs) => {
+      const parsed = parseSidebarSpaceKey(spaceKey);
+      return parsed === null
+        ? false
+        : update(parsed.homeEnvironmentId, (spaces) =>
+            addSidebarSpaceProjectRefs(spaces, parsed.spaceId, projectRefs),
           );
     },
   };
