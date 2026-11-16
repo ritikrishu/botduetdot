@@ -44,8 +44,9 @@ function SpaceChip({ dimmed, ...props }: ComponentProps<"button"> & { dimmed?: b
       {...props}
       type="button"
       className={cn(
-        // The selected space must read at a glance: a primary tint and outline, not the hover grey.
-        "group relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-sidebar-muted-foreground outline-none hover:bg-sidebar-row-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring aria-pressed:bg-primary/20 aria-pressed:text-sidebar-foreground aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-primary aria-pressed:hover:bg-primary/25",
+        // The selected space reads at a glance by brightness alone: a near-foreground tile in light theme,
+        // a muted one in dark (about 3.2:1). Focus is an inset outline, light on the selected tile so it shows.
+        "group relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-sidebar-muted-foreground hover:bg-sidebar-row-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-solid focus-visible:outline-ring aria-pressed:focus-visible:outline-background dark:aria-pressed:focus-visible:outline-foreground aria-pressed:bg-foreground/90 aria-pressed:text-sidebar-foreground aria-pressed:ring-1 aria-pressed:ring-white/8 aria-pressed:ring-inset aria-pressed:hover:bg-foreground/90 dark:aria-pressed:bg-foreground/38 dark:aria-pressed:ring-black/12 dark:aria-pressed:hover:bg-foreground/38",
         dimmed && "opacity-50",
       )}
     />
@@ -194,7 +195,7 @@ function SidebarSpacesStrip(props: {
                   "size-4 text-sm leading-4",
                   // Emoji ignore text colour, so unselected glyphs dim to let the selected one stand out.
                   !selected &&
-                    "opacity-60 grayscale-60 group-hover:opacity-100 group-hover:grayscale-0",
+                    "opacity-80 grayscale-60 group-hover:opacity-100 group-hover:grayscale-0 dark:opacity-60 dark:group-hover:opacity-100",
                 )}
               />
               {needsYou ? (
