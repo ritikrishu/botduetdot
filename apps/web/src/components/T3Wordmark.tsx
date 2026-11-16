@@ -1,6 +1,9 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import type { SVGProps } from "react";
+import { BrandGlyph } from "./BrandGlyph";
 
 export function T3Wordmark(props: SVGProps<SVGSVGElement>) {
+  if (BRAND.id !== "upstream") return <BrandGlyph {...props} />;
   return (
     <svg {...props} viewBox="15.5309 37 94.3941 56.96" xmlns="http://www.w3.org/2000/svg">
       <path
