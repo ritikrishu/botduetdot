@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Brand text the app can override in its own resources (BotDuetDot does, see withStandaloneIsolation). -->
+<resources>
+  <string name="t3_pictures_album" translatable="false">T3 Code</string>
+</resources>

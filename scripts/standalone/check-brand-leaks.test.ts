@@ -17,6 +17,7 @@ import {
   checkUpdateManifest,
   copyVerified,
   gateArtifacts,
+  isInsideCheckout,
   main,
   redact,
   scanCollection,
@@ -566,4 +567,16 @@ it("refuses an artifact swapped between verification and output", () => {
     ),
   ).toThrow("changed after verification");
   expect(NodeFS.existsSync(output)).toBe(false);
+});
+
+it("detects signing secrets inside the checkout, including through symlinks", () => {
+  using temp = temporary();
+  const inside = NodePath.join(import.meta.dirname, "fixtures", "Info.plist");
+  expect(isInsideCheckout(inside)).toBe(true);
+  const outside = NodePath.join(temp.directory, "upload.p12");
+  NodeFS.writeFileSync(outside, "key");
+  expect(isInsideCheckout(outside)).toBe(false);
+  const link = NodePath.join(temp.directory, "linked.p12");
+  NodeFS.symlinkSync(inside, link);
+  expect(isInsideCheckout(link)).toBe(true);
 });

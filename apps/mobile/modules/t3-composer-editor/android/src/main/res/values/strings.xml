@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Brand text the app can override in its own resources (BotDuetDot does, see withStandaloneIsolation). -->
+<resources>
+  <string name="t3_clipboard_label" translatable="false">T3 Code</string>
+  <string name="t3_hosted_thread_link_prefix" translatable="false">https://app.t3.codes/threads/</string>
+</resources>

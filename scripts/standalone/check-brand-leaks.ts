@@ -548,6 +548,16 @@ export function run(
     );
   return result.stdout;
 }
+/** Whether a file resolves, through symlinks, to a path inside this checkout. */
+export function isInsideCheckout(file: string): boolean {
+  const relative = NodePath.relative(NodeFS.realpathSync(REPO_ROOT), NodeFS.realpathSync(file));
+  return (
+    relative === "" ||
+    (relative !== ".." &&
+      !relative.startsWith(`..${NodePath.sep}`) &&
+      !NodePath.isAbsolute(relative))
+  );
+}
 export function sha256(file: string): string {
   return NodeCrypto.createHash("sha256").update(NodeFS.readFileSync(file)).digest("hex");
 }
@@ -824,7 +834,9 @@ export function checkAndroidAab(
       ["dump", "resources", `--bundle=${aab}`, "--resource=string/app_name", "--values"],
       { env },
     );
-    const files = ["base/assets", "base/root"].flatMap((directory) =>
+    // Compiled Kotlin/Java (dex) and native libraries are not reached by the bundle-time rewrite,
+    // so their strings are scanned too.
+    const files = ["base/assets", "base/root", "base/dex"].flatMap((directory) =>
       NodeFS.existsSync(NodePath.join(temporary, directory))
         ? scanFiles(
             NodePath.join(temporary, directory),
@@ -833,6 +845,17 @@ export function checkAndroidAab(
           ).map((file) => ({ ...file, javascript: false }))
         : [],
     );
+    const libraries = NodePath.join(temporary, "base/lib");
+    if (NodeFS.existsSync(libraries))
+      for (const file of walkFiles(libraries)) {
+        const scope = `base/lib/${NodePath.relative(libraries, file)}`;
+        files.push({
+          artifact: `${aab}!/${scope}`,
+          scope,
+          text: NodeFS.readFileSync(file).toString("latin1"),
+          javascript: false,
+        });
+      }
     for (const required of ["base/assets/index.android.bundle", "base/assets/app.config"]) {
       if (!files.some((file) => file.scope === required))
         throw new Error(`Missing ${required} in AAB`);

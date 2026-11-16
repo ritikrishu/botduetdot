@@ -876,7 +876,7 @@ internal class SelectionAwareEditText(
     return when {
       payload["html"]?.contains("data-t3-context-fragment=") == true -> pasteContext(payload)
       pasteImagesOrInterceptedText() -> true
-      isSingleItemClip() && T3ComposerClipboard.hasThreadLink(payload["text"].orEmpty()) ->
+      isSingleItemClip() && T3ComposerClipboard.hasThreadLink(context, payload["text"].orEmpty()) ->
         pasteContext(payload)
       else -> false
     }
