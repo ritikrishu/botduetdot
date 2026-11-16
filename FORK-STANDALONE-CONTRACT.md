@@ -199,6 +199,11 @@ first-impression branding; **P2** = cosmetic or rare path.
 - `apps/marketing` (t3.codes site), `infra/relay`, `infra/task-cache`, `packaging/aur`, hosted web deploy: **OUT**.
 - `.github/workflows/*`: upstream pipelines are gated to `pingdotgg/t3code` (`release.yml:53`, `publish-aur.yml:40`, `mobile-eas-production.yml:77`, `deploy-relay.yml:29`, …) and use Blacksmith runners, task cache, Vercel, Discord, a release GitHub App and the relay config. **Not reusable**; Actions are currently **enabled** on `ritikrishu/botduetdot` (§7).
 - `LICENSE` (MIT, "Copyright (c) 2026 T3 Tools Inc."): KEEP unchanged. In-app license screens omit first-party `@t3tools/*` packages (`docs/internals/open-source-licenses.md`), so add the notice (S34) and About credits (S36).
+  **r5 amendment (orchestrator, from T6):** the licence config has no brand condition, so the S34 "T3 Code"
+  notice ships in **both** brands' generated notices. Accepted: any build of this fork is a derivative of
+  T3 Code, so the attribution is accurate either way, and an extra notice changes no behaviour, identifier
+  or network call (what the upstream-unchanged invariant protects). No brand filtering in
+  `scripts/lib/third-party-licenses.ts`.
 
 ---
 
