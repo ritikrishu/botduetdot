@@ -58,7 +58,7 @@ export function PullRequestToolbar(props: {
       title={BRAND_NAME}
       titleContent={
         <WorkspaceBrandTitle
-          accessibilityLabel="T3 Code, Pull requests"
+          accessibilityLabel={`${BRAND_NAME}, Pull requests`}
           onOpenEnvironments={() => openSettings(navigation, "SettingsEnvironments")}
         />
       }

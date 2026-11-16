@@ -1,4 +1,6 @@
 import type { ExpoConfig } from "expo/config";
+import * as NodeChildProcess from "node:child_process";
+import * as NodeModule from "node:module";
 import { expect, it } from "vite-plus/test";
 import { applyMobileBrand } from "./brand.config";
 const env = {
@@ -7,6 +9,24 @@ const env = {
   T3CODE_MOBILE_VERSION: "0.1.9-botduetdot.1",
   T3CODE_ANDROID_VERSION_CODE: "2026111601",
 };
+const require = NodeModule.createRequire(import.meta.url);
+
+it.each(["development", "preview", "production"] as const)(
+  "removes EAS metadata after Expo evaluates all plugins for standalone %s",
+  (variant) => {
+    const output = NodeChildProcess.execFileSync(
+      process.execPath,
+      [require.resolve("expo/bin/cli"), "config", "--type", "public", "--json"],
+      {
+        cwd: import.meta.dirname,
+        env: { ...process.env, ...env, APP_VARIANT: variant, EXPO_NO_DOTENV: "1" },
+        encoding: "utf8",
+      },
+    );
+    expect(JSON.parse(output).extra).not.toHaveProperty("eas");
+    expect(output).not.toMatch(/t3code|t3tools|t3\.codes|u\.expo\.dev|pingdotgg|d763fcb8/i);
+  },
+);
 function fixture(): ExpoConfig {
   return {
     name: "T3 Code",

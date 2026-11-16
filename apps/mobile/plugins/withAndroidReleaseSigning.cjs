@@ -3,12 +3,19 @@ const { withAppBuildGradle } = require("expo/config-plugins");
 const marker = "// BotDuetDot upload signing";
 const signing = `
 ${marker}
+def standaloneReleaseRequested = gradle.startParameter.taskNames.any { task ->
+    def name = task.tokenize(':').last().toLowerCase(java.util.Locale.ROOT)
+    name.contains('release') || name in ['build', 'assemble', 'bundle']
+}
 def standaloneUploadValue = { name ->
     def value = System.getenv(name) ?: project.findProperty(name)
     if (!value) throw new GradleException("Missing " + name + " for standalone upload signing")
     return value
 }
-android {
+// Never leave Expo's debug key on the release build type, even for non-release invocations.
+android.buildTypes.release.signingConfig = null
+if (standaloneReleaseRequested) {
+  android {
     signingConfigs {
         release {
             storeFile file(standaloneUploadValue("STANDALONE_UPLOAD_STORE_FILE"))
@@ -18,6 +25,7 @@ android {
         }
     }
     buildTypes.release.signingConfig = signingConfigs.release
+  }
 }
 `;
 function applyReleaseSigning(contents) {

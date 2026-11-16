@@ -64,6 +64,7 @@ import {
 
 import { AppText as Text } from "../../components/ui/AppText";
 import { T3Wordmark } from "../../components/T3Wordmark";
+import { IS_STANDALONE_BRAND, T3_CODE_BRAND_MARK_SOURCE } from "../../components/brandAssets";
 import { BrowserAppIcon } from "./BrowserAppIcon";
 import { useAppActive, useReduceMotionEnabled } from "../../lib/appState";
 import { cn } from "../../lib/cn";
@@ -132,6 +133,9 @@ function WorkLogIcon(props: {
 }) {
   const colorClassName = props.highlighted ? "accent-foreground" : props.colorClassName;
   if (props.icon === "t3-code") {
+    if (IS_STANDALONE_BRAND) {
+      return <Image source={T3_CODE_BRAND_MARK_SOURCE} style={{ width: 14, height: 14 }} />;
+    }
     return (
       <T3Wordmark height={10} {...(colorClassName ? { colorClassName } : { color: props.color })} />
     );

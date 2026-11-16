@@ -128,5 +128,6 @@ export function applyMobileBrand(
     }
   });
   result.plugins.push("./plugins/withAndroidReleaseSigning.cjs");
+  result.plugins.push("./plugins/withStandaloneIsolation.cjs");
   return result;
 }
