@@ -43,6 +43,8 @@ export const FORBIDDEN_PATTERNS = [
   ["upstream-owner", /pingdotgg/gi],
   ["upstream-identifier", /com[./]t3tools/gi],
   ["upstream-npm", /registry\.npmjs\.org\/t3/gi],
+  // The standalone CLI has no npm package; npx t3@… runs the upstream CLI.
+  ["upstream-npx", /npx t3@/g],
   ["expo-update", /u\.expo\.dev/gi],
   ["expo-project", /d763fcb8-d37c-41ea-a773-b54a0ab4a454/gi],
   ["posthog-key", /phc_/g],
@@ -106,7 +108,8 @@ export const HERMES_COUNTED_EXEMPTIONS: readonly CountedExemption[] = [
   {
     scope: hermes,
     literal: utf16(ABOUT_CREDITS),
-    count: 1,
+    // The runtime profile and the preview WebView script, which reads BRAND for the CLI name.
+    count: 2,
     reason:
       "MIT attribution in the runtime profile; the preview no longer embeds it (contract r10)",
     source: "packages/contracts/src/brandStandalone.ts:66",
@@ -144,7 +147,8 @@ export const ANDROID_JS_COUNTED_EXEMPTIONS: readonly CountedExemption[] = [
   {
     scope: androidJs,
     literal: ABOUT_CREDITS.replace("©", String.raw`\xa9`),
-    count: 1,
+    // The runtime profile and the preview WebView script, which reads BRAND for the CLI name.
+    count: 2,
     reason: "MIT runtime attribution; Metro escapes the copyright character (contract r10)",
     source: "packages/contracts/src/brandStandalone.ts:66",
   },

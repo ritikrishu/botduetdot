@@ -92,7 +92,9 @@ export class IncompatibleServerProtocolError extends Schema.TaggedError<Incompat
   override get message(): string {
     return [
       `The running T3 Code server (${this.serverVersion}) speaks orchestration protocol ${String(this.serverProtocolVersion)}, but this CLI speaks protocol ${String(ORCHESTRATION_PROTOCOL_VERSION)}.`,
-      `Pair with the matching CLI instead: \`npx t3@${this.serverVersion} pair\`.`,
+      BRAND.npmPackage === null
+        ? `Pair with \`${BRAND.cliName} pair\` from ${BRAND.name} ${this.serverVersion} instead.`
+        : `Pair with the matching CLI instead: \`npx ${BRAND.npmPackage}@${this.serverVersion} pair\`.`,
     ].join("\n");
   }
 }

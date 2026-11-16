@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -14,6 +15,13 @@ import * as DesktopBackendPool from "../backend/DesktopBackendPool.ts";
 import * as DesktopServerExposure from "../backend/DesktopServerExposure.ts";
 import * as DesktopAppSettings from "../settings/DesktopAppSettings.ts";
 import * as DesktopWslEnvironment from "./DesktopWslEnvironment.ts";
+
+// Without an npm package, an npx hint would run the upstream CLI against this home.
+const LATEST_CLI_HINT =
+  BRAND.npmPackage === null
+    ? "Pass"
+    : `Use \`npx ${BRAND.npmPackage}@latest\` if \`${BRAND.cliName}\` is missing or outdated, and pass`;
+const HOME_LABEL = BRAND.id === "upstream" ? "T3 home" : `${BRAND.name} home`;
 
 export const WSL_INSTANCE_ID_PREFIX = "wsl:";
 const WSL_DEFAULT_DISTRO_ID = `${WSL_INSTANCE_ID_PREFIX}default`;
@@ -128,7 +136,7 @@ export const layer = Layer.effect(
                 Ref.set(
                   preflightErrorRef,
                   Option.some(
-                    "Another T3 Code server is using this distro's T3 home, or an older background service is set up for it. Stop that server or pair with it, or try `t3 update` in the distro. If the older launcher cannot update, run `t3 service uninstall` and optionally reinstall with `t3 service install` from a current CLI in the distro. Use `npx t3@latest` if `t3` is missing or outdated, and pass `--base-dir` with the service's T3 home to each command.",
+                    `Another T3 Code server is using this distro's ${HOME_LABEL}, or an older background service is set up for it. Stop that server or pair with it, or try \`t3 update\` in the distro. If the older launcher cannot update, run \`t3 service uninstall\` and optionally reinstall with \`t3 service install\` from a current CLI in the distro. ${LATEST_CLI_HINT} \`--base-dir\` with the service's ${HOME_LABEL} to each command.`,
                   ),
                 ),
               ),
