@@ -199,6 +199,17 @@ first-impression branding; **P2** = cosmetic or rare path.
 - `apps/marketing` (t3.codes site), `infra/relay`, `infra/task-cache`, `packaging/aur`, hosted web deploy: **OUT**.
 - `.github/workflows/*`: upstream pipelines are gated to `pingdotgg/t3code` (`release.yml:53`, `publish-aur.yml:40`, `mobile-eas-production.yml:77`, `deploy-relay.yml:29`, …) and use Blacksmith runners, task cache, Vercel, Discord, a release GitHub App and the relay config. **Not reusable**; Actions are currently **enabled** on `ritikrishu/botduetdot` (§7).
 - `LICENSE` (MIT, "Copyright (c) 2026 T3 Tools Inc."): KEEP unchanged. In-app license screens omit first-party `@t3tools/*` packages (`docs/internals/open-source-licenses.md`), so add the notice (S34) and About credits (S36).
+  **r10 amendment (orchestrator, from the first Android bundle scan):** Hermes stores strings
+  back to back in one table, so `hermes-upstream-identity` (bare `t3code`/`.t3` tokens) depends on
+  string order, and it cannot tell internal identifiers that both brands keep (storage keys such as
+  `t3code.preferences`, OTel attributes, git branch and MCP tool recognizers) from leaks.
+  Replace it with an exact check: `release-android.ts` also exports the same Metro bundle as
+  JavaScript (`expo export --platform android --no-bytecode`, release environment, private temp
+  directory) and runs the JS rules on it: forbidden patterns, constructed upstream schemes and a
+  counted bare-name entry for the mobile bundle. The Hermes byte scan keeps every forbidden pattern
+  (ASCII and UTF-16) on the shipped bytes. Hermes counted exemptions: the MIT credit (now 1, since
+  the WebView script no longer embeds the profile), the MIT notice name and `sourceUrl`, and the shared
+  `t3.json` schema URL and doc string (main bundle plus the preview WebView script).
   **r9 amendment (orchestrator, from integration check D):** supersedes "Other 'T3 Code' copy: KEEP v1"
   and "Model-facing 'T3 Code' text". The packaged app showed the T3 wordmark as its sidebar title (fixed
   in `1b964123cd`) and ~400 literal "T3 Code" strings remain across web, mobile, desktop, server and
