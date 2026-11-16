@@ -19,7 +19,15 @@ it.each(["development", "preview", "production"] as const)(
       [require.resolve("expo/bin/cli"), "config", "--type", "public", "--json"],
       {
         cwd: import.meta.dirname,
-        env: { ...process.env, ...env, APP_VARIANT: variant, EXPO_NO_DOTENV: "1" },
+        // A root test run loads upstream VITE_* defaults; a release environment never carries them.
+        env: {
+          ...Object.fromEntries(
+            Object.entries(process.env).filter(([key]) => !key.startsWith("VITE_")),
+          ),
+          ...env,
+          APP_VARIANT: variant,
+          EXPO_NO_DOTENV: "1",
+        },
         encoding: "utf8",
       },
     );
