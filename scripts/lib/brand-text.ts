@@ -35,11 +35,9 @@ export function isBrandTextSource(id: string, root = repoRoot): boolean {
 // Subcommands of the CLI whose launcher standalone installs as BRAND.cliName.
 const CLI_SUBCOMMANDS =
   "app|auth|browser|config|connect|doctor|down|environment|install|pair|policy|project|serve|service|status|theme|thread|trace|triage|uninstall|up|update";
-// "T3 Code" and "T3 home" contain a space, so they cannot be identifiers. Replacing source also
-// covers regexes, nested generated code, templates and JSX without changing newlines; neither
-// shipped name contains syntax delimiters. The CLI name is renamed only as quoted copy (`t3` alone
-// or `t3 <subcommand>`, never other template text such as the git message `t3 checkpoint ref=…`)
-// and in `t3@${version}` labels; npm commands (`npx t3@`, `install t3@`, `${runner} t3@`) stay.
+// "T3 Code" and "T3 home" contain a space, so they are never identifiers. The CLI name changes only
+// in quoted `t3`/`t3 <subcommand>` copy and `t3@${version}` labels, never in other template text
+// (the git message `t3 checkpoint …`) or npm commands (`npx t3@`, `install t3@`, `${runner} t3@`).
 const BRAND_TEXT_PATTERN = new RegExp(
   `T3 Code|T3 home|(?<=\`)t3(?=\`| (?:${CLI_SUBCOMMANDS})\\b)|(?<!\\} |npx |install )\\bt3@(?=\\$\\{)`,
   "g",
