@@ -345,6 +345,10 @@ so it is not done either. The one cross-product allowance is CORS: the server ac
 renderer origins `t3code://app`/`t3code-dev://app` (S9), so the official desktop app can add a BotDuetDot
 server as a remote environment. Shared helpers take the scheme set from `brandAppSchemes(BRAND)`; the
 `t3code(?:-[a-z]+)?:` regexes (`promptLinks.ts:184`, `remote.ts:7`) become `brandAppSchemePattern(BRAND)`.
+**r3 amendment (orchestrator, from T1):** `brandAppSchemePattern(UPSTREAM_BRAND)` must be exactly today's
+`/^t3code(?:-[a-z]+)?:$/` (upstream also accepts e.g. `t3code-nightly:`), so upstream behaviour is
+unchanged; `brandAppSchemePattern(STANDALONE_BRAND)` matches only the three BotDuetDot schemes.
+`isBrandAppProtocol` delegates to `brandAppSchemePattern`, so the same split applies to it. Tests pin both.
 
 ### 2.5 What stays T3-named (KEEP)
 
