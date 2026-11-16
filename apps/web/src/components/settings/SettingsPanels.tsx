@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import { useAtomValue } from "@effect/atom-react";
 import { NotificationSettings } from "./NotificationSettings";
 import { PRIVACY_POLICY_URL } from "../../legalLinks";
@@ -330,7 +331,7 @@ function AboutVersionSection() {
           </Tooltip>
         }
       />
-      {hasDesktopBridge ? (
+      {BRAND.features.updateTrackSwitch && hasDesktopBridge ? (
         <SettingsRow
           {...searchableSetting("update-track")}
           description={
@@ -393,7 +394,7 @@ function AboutVersionSection() {
             </Select>
           }
         />
-      ) : selectedHostedAppChannel ? (
+      ) : BRAND.features.updateTrackSwitch && selectedHostedAppChannel ? (
         <SettingsRow
           {...searchableSetting("update-track")}
           description="Switches the hosted app release channel."
@@ -423,7 +424,7 @@ function AboutVersionSection() {
         />
       ) : null}
       {hasDesktopBridge ? <CliCommandSettingsRow /> : null}
-      {switchChannel === null ? null : (
+      {!BRAND.features.updateTrackSwitch || switchChannel === null ? null : (
         <UpdateTrackSwitchDialog channel={switchChannel} onClose={() => setSwitchChannel(null)} />
       )}
     </>

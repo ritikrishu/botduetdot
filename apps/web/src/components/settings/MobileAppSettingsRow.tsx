@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import { AndroidIcon, AppleIcon } from "../Icons";
 import { Button } from "../ui/button";
 import { Popover, PopoverPopup, PopoverTitle, PopoverTrigger } from "../ui/popover";
@@ -9,16 +10,16 @@ const stores = [
   {
     label: "iPhone and iPad",
     store: "App Store",
-    url: "https://apps.apple.com/us/app/t3-code-remote-claude-more/id6787819824",
+    url: BRAND.links.iosStore,
     Icon: AppleIcon,
   },
   {
     label: "Android",
     store: "Google Play",
-    url: "https://play.google.com/store/apps/details?id=com.t3tools.t3code",
+    url: BRAND.links.androidStore,
     Icon: AndroidIcon,
   },
-];
+].filter((store): store is typeof store & { url: string } => store.url !== null);
 
 export function MobileAppSettingsRow() {
   return (

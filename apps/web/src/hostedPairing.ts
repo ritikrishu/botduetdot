@@ -1,4 +1,4 @@
-import { DEFAULT_HOSTED_APP_URL } from "@t3tools/shared/connectAuth";
+import { BRAND } from "@t3tools/contracts/brand";
 
 import { getPairingTokenFromUrl, setPairingTokenOnUrl } from "@t3tools/shared/remote";
 
@@ -11,7 +11,8 @@ export interface HostedPairingRequest {
 export type HostedAppChannel = "latest" | "nightly";
 
 export function configuredHostedAppUrl(): string {
-  return import.meta.env.VITE_HOSTED_APP_URL?.trim() || DEFAULT_HOSTED_APP_URL;
+  if (!BRAND.features.t3Connect) return BRAND.hostedApp.url;
+  return import.meta.env.VITE_HOSTED_APP_URL?.trim() || BRAND.hostedApp.url;
 }
 
 function configuredBackendUrl(): string {
@@ -19,6 +20,7 @@ function configuredBackendUrl(): string {
 }
 
 function configuredHostedAppChannel(): HostedAppChannel | null {
+  if (!BRAND.features.t3Connect) return null;
   const channel = import.meta.env.VITE_HOSTED_APP_CHANNEL?.trim().toLowerCase();
   return channel === "latest" || channel === "nightly" ? channel : null;
 }

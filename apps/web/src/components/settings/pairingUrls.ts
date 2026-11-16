@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import { buildHostedPairingUrl } from "../../hostedPairing";
 import { setPairingTokenOnUrl } from "@t3tools/shared/remote";
 
@@ -8,6 +9,7 @@ export function resolveDesktopPairingUrl(endpointUrl: string, credential: string
 }
 
 export function resolveHostedPairingUrl(endpointUrl: string, credential: string): string | null {
+  if (!BRAND.hostedApp.pairingLinks) return null;
   const url = new URL(endpointUrl);
   if (url.protocol !== "https:") {
     return null;
