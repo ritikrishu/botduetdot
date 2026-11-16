@@ -61,13 +61,29 @@ it("requires env credentials and a fully signed AAB with the pinned upload certi
   const fingerprint = "AB".repeat(32);
   const certificate = `Owner: CN=Owner\nSHA256: ${fingerprint.match(/../g)!.join(":")}`;
   expect(normalizeFingerprint(fingerprint.toLowerCase())).toBe(fingerprint);
-  verifyAndroidSignature(certificate, "jar verified.", fingerprint);
+  const entry = (flags: string, name: string) =>
+    `${flags}    1245 Thu Jan 01 01:01:02 IST 1981 ${name}`;
+  // Real AAB output: every content entry signed, signature files unflagged, JarInputStream notes.
+  const aab = [
+    entry("sm  ", "base/dex/classes.dex"),
+    entry("s   ", "META-INF/MANIFEST.MF"),
+    entry("    ", "META-INF/UPLOAD.SF"),
+    entry("    ", "META-INF/UPLOAD.RSA"),
+    "jar verified.",
+    "This JAR file contains internal inconsistencies that may result in different contents when reading via JarFile and JarInputStream:",
+    "- Manifest is missing when reading via JarInputStream",
+    "- Entry base/dex/classes.dex is signed in JarFile but is not signed in JarInputStream",
+  ].join("\n");
+  verifyAndroidSignature(certificate, aab, fingerprint);
   for (const [cert, verification] of [
-    [certificate.replace("CN=Owner", "CN=Android Debug"), "jar verified."],
-    [certificate.replace("AB", "CD"), "jar verified."],
+    [certificate.replace("CN=Owner", "CN=Android Debug"), aab],
+    [certificate.replace("AB", "CD"), aab],
     [certificate, "jar is unsigned"],
-    [certificate, "jar verified.\nThis jar contains unsigned entries"],
-    [certificate, "jar verified.\nThe jar is treated as unsigned"],
+    [certificate, "jar verified."],
+    [certificate, `${aab}\nThis jar contains unsigned entries`],
+    [certificate, `${aab}\nThe jar is treated as unsigned`],
+    [certificate, `${aab}\n${entry("    ", "base/root/extra.properties")}`],
+    [certificate, `${aab}\n- Entry base/x is not signed`],
   ])
     expect(() => verifyAndroidSignature(cert!, verification!, fingerprint)).toThrow();
   expect(() => normalizeFingerprint("bad")).toThrow();

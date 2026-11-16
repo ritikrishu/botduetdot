@@ -70,6 +70,9 @@ it("forces the standalone feed and identity while preserving macOS permissions a
     "!apps/desktop/prod-resources/installer.nsh",
     "!apps/desktop/prod-resources/linux",
     "!apps/desktop/prod-resources/linux/**/*",
+    "!apps/desktop/prod-resources/dmg/dmg-background-nightly.svg",
+    "!patches",
+    "!patches/**/*",
   ]);
   assert.equal(config.mac.provisioningProfile, "upstream.profile");
   assert.deepEqual(desktopBrandStageMetadata(STANDALONE_BRAND), {

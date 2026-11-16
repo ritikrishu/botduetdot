@@ -74,11 +74,26 @@ export function verifyAndroidSignature(
     /CN\s*=\s*Android Debug/i.test(certificate)
   )
     throw new Error("AAB signer must be the expected non-debug upload certificate.");
+  // Bundle tools do not write the manifest first, so JarInputStream cannot see it and jarsigner
+  // notes every entry; that is expected for an AAB. The verbose entry flags are the real check.
+  const relevant = jarVerification.replace(BENIGN_JAR_INPUT_STREAM_NOTES, "");
+  const entries = jarEntries(jarVerification);
   if (
-    !/jar verified\./.test(jarVerification) ||
-    /jar is unsigned|unsigned entries|not signed|treated as unsigned/i.test(jarVerification)
+    !/jar verified\./.test(relevant) ||
+    /jar is unsigned|unsigned entries|not signed|treated as unsigned/i.test(relevant) ||
+    !entries.some((entry) => entry.signed) ||
+    entries.some((entry) => !entry.signed && !JAR_SIGNATURE_FILE.test(entry.name))
   )
     throw new Error("AAB JAR signature is missing, invalid, or leaves unsigned entries.");
+}
+const BENIGN_JAR_INPUT_STREAM_NOTES =
+  /^- (?:Entry .+ is signed in JarFile but is not signed in JarInputStream|Manifest is missing when reading via JarInputStream)$/gm;
+const JAR_SIGNATURE_FILE = /^META-INF\/[^/]+\.(?:SF|RSA|DSA|EC)$/;
+/** Entries from `jarsigner -verify -verbose`: flags, size, date, then the entry name. */
+export function jarEntries(verbose: string): { readonly signed: boolean; readonly name: string }[] {
+  return [
+    ...verbose.matchAll(/^([ s][ m][ k][ i]) +\d+ \w{3} \w{3} \d{2} [\d:]{8} \S+ \d{4} (.+)$/gm),
+  ].map((match) => ({ signed: match[1]!.startsWith("s"), name: match[2]! }));
 }
 export function main(args = process.argv.slice(2)): void {
   const { values } = NodeUtil.parseArgs({

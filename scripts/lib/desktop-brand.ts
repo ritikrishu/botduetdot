@@ -13,10 +13,15 @@ const electronDefaultUsageDescriptions = (name: string) => ({
 
 // Windows installer script and Linux AppStream metadata carry upstream identity and are unused
 // on macOS; electron-builder reads them from apps/desktop/resources, not from the staged copy.
+// The nightly DMG background belongs to a channel standalone does not ship, and the pnpm patches
+// only matter while the stage installs dependencies; both would otherwise land in app.asar.
 export const STANDALONE_MAC_FILE_EXCLUSIONS = [
   "!apps/desktop/prod-resources/installer.nsh",
   "!apps/desktop/prod-resources/linux",
   "!apps/desktop/prod-resources/linux/**/*",
+  "!apps/desktop/prod-resources/dmg/dmg-background-nightly.svg",
+  "!patches",
+  "!patches/**/*",
 ] as const;
 
 export function applyDesktopBrandBuildConfig(
