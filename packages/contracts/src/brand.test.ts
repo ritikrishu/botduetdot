@@ -26,6 +26,8 @@ describe("brand profiles", () => {
       cliName: "t3",
       // packages/shared/src/cliRelease.ts:6
       repository: "pingdotgg/t3code",
+      // packages/shared/src/remote.ts:7; packages/shared/src/promptLinks.ts:184
+      schemePolicy: "prefix",
       // apps/mobile/app.config.ts:83,91,99; apps/desktop/src/electron/ElectronProtocol.ts:16-17
       schemes: {
         production: "t3code",
@@ -80,10 +82,11 @@ describe("brand profiles", () => {
         productName: "T3 Code (Beta)",
         nightlyProductName: "T3 Code (Nightly)",
         artifactBaseName: "T3-Code",
-        // apps/desktop/src/app/DesktopUserData.ts:42-44 (production legacy profile)
+        // apps/desktop/src/app/DesktopUserData.ts:42-44 (production and development profiles)
         userDataDirName: "t3code-v2",
         devUserDataDirName: "t3code-dev",
         legacyUserDataDirName: "T3 Code (Alpha)",
+        devLegacyUserDataDirName: "T3 Code (Dev)",
         // apps/desktop/src/app/DesktopLegacyLocalStorage.ts:24
         legacyLocalStorageProfileNames: ["T3 Code (Alpha)", "t3code"],
         // apps/desktop/src/app/DesktopEnvironment.ts:230-232
@@ -111,6 +114,8 @@ describe("brand profiles", () => {
         windowsSubkey: "SOFTWARE\\Policies\\T3Tools\\T3Code",
       },
       mobile: {
+        // apps/mobile/app.config.ts:237
+        expoSlug: "t3-code",
         // apps/mobile/app.config.ts:98-102
         appName: "T3 Code",
         androidPackage: "com.t3tools.t3code",
@@ -138,6 +143,7 @@ describe("brand profiles", () => {
       homeDirName: ".botduetdot",
       cliName: "botduetdot",
       repository: "ritikrishu/botduetdot",
+      schemePolicy: "exact",
       schemes: {
         production: "botduetdot",
         development: "botduetdot-dev",
@@ -177,6 +183,7 @@ describe("brand profiles", () => {
         userDataDirName: "botduetdot",
         devUserDataDirName: "botduetdot-dev",
         legacyUserDataDirName: null,
+        devLegacyUserDataDirName: null,
         legacyLocalStorageProfileNames: [],
         appUserModelId: "com.ritikrishu.botduetdot",
         devAppUserModelId: "com.ritikrishu.botduetdot.dev",
@@ -197,6 +204,7 @@ describe("brand profiles", () => {
         windowsSubkey: "SOFTWARE\\Policies\\ritikrishu\\BotDuetDot",
       },
       mobile: {
+        expoSlug: "botduetdot",
         appName: "BotDuetDot",
         androidPackage: "com.ritikrishu.botduetdot",
         iosBundleIdentifier: "com.ritikrishu.botduetdot",
@@ -285,7 +293,9 @@ describe("brand selection", () => {
 describe("brand protocols and origins", () => {
   it("preserves the upstream parser including arbitrary lowercase channel suffixes", () => {
     // packages/shared/src/remote.ts:7 and promptLinks.ts:184
-    expect(brandAppSchemePattern(UPSTREAM_BRAND).toString()).toBe("/^t3code(?:-[a-z]+)?:$/");
+    const pattern = brandAppSchemePattern(UPSTREAM_BRAND);
+    expect(pattern.source).toBe("^t3code(?:-[a-z]+)?:$");
+    expect(pattern.flags).toBe("");
     expect(brandAppSchemes(UPSTREAM_BRAND)).toEqual(["t3code", "t3code-dev", "t3code-preview"]);
     for (const protocol of [
       "t3code:",
@@ -338,9 +348,30 @@ describe("brand protocols and origins", () => {
     }
   });
 
-  it("escapes scheme punctuation in the standalone pattern", () => {
+  it("derives and escapes the prefix pattern from the profile slug and policy", () => {
     const brand = {
       ...STANDALONE_BRAND,
+      schemePolicy: "prefix" as const,
+      slug: "example.app+client",
+    };
+    for (const protocol of ["example.app+client:", "example.app+client-nightly:"]) {
+      expect(isBrandAppProtocol(protocol, brand)).toBe(true);
+    }
+    for (const protocol of [
+      "exampleXapp+client:",
+      "example.apppclient:",
+      "example.app+client-Nightly:",
+      "t3code:",
+      "botduetdot:",
+    ]) {
+      expect(isBrandAppProtocol(protocol, brand)).toBe(false);
+    }
+  });
+
+  it("derives and escapes exact schemes independently of the profile id and slug", () => {
+    const brand = {
+      ...UPSTREAM_BRAND,
+      schemePolicy: "exact" as const,
       schemes: {
         production: "example.app",
         development: "example+dev",
@@ -349,8 +380,11 @@ describe("brand protocols and origins", () => {
     };
     expect(isBrandAppProtocol("example.app:", brand)).toBe(true);
     expect(isBrandAppProtocol("example+dev:", brand)).toBe(true);
+    expect(isBrandAppProtocol("example-preview:", brand)).toBe(true);
     expect(isBrandAppProtocol("exampleXapp:", brand)).toBe(false);
     expect(isBrandAppProtocol("exampleeeedev:", brand)).toBe(false);
+    expect(isBrandAppProtocol("example.app-nightly:", brand)).toBe(false);
+    expect(isBrandAppProtocol("t3code:", brand)).toBe(false);
   });
 
   it("returns just the two desktop renderer origins for each profile", () => {

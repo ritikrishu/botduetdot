@@ -222,6 +222,7 @@ export interface BrandProfile {
   readonly homeDirName: string; //   ".t3"                | ".botduetdot"
   readonly cliName: string; //       "t3"                 | "botduetdot"
   readonly repository: string; //    "pingdotgg/t3code"   | "ritikrishu/botduetdot"
+  readonly schemePolicy: "prefix" | "exact"; // "prefix" | "exact"
   readonly schemes: {
     readonly production: string;
     readonly development: string;
@@ -265,7 +266,8 @@ export interface BrandProfile {
     readonly artifactBaseName: string; // "T3-Code" | "BotDuetDot"
     readonly userDataDirName: string; // "t3code-v2" | "botduetdot"
     readonly devUserDataDirName: string; // "t3code-dev" | "botduetdot-dev"
-    readonly legacyUserDataDirName: string | null; // "T3 Code (Alpha)"/"(Dev)" | null
+    readonly legacyUserDataDirName: string | null; // "T3 Code (Alpha)" | null
+    readonly devLegacyUserDataDirName: string | null; // "T3 Code (Dev)" | null
     readonly legacyLocalStorageProfileNames: readonly string[]; // ["T3 Code (Alpha)","t3code"] | []
     readonly appUserModelId: string;
     readonly devAppUserModelId: string;
@@ -279,6 +281,7 @@ export interface BrandProfile {
   readonly service: { readonly launchdLabel: string; readonly systemdUnitName: string };
   readonly managedPolicy: { readonly macDomain: string; readonly windowsSubkey: string };
   readonly mobile: {
+    readonly expoSlug: string; // "t3-code" | "botduetdot"
     readonly appName: string;
     readonly androidPackage: string;
     readonly iosBundleIdentifier: string;
@@ -349,6 +352,9 @@ server as a remote environment. Shared helpers take the scheme set from `brandAp
 `/^t3code(?:-[a-z]+)?:$/` (upstream also accepts e.g. `t3code-nightly:`), so upstream behaviour is
 unchanged; `brandAppSchemePattern(STANDALONE_BRAND)` matches only the three BotDuetDot schemes.
 `isBrandAppProtocol` delegates to `brandAppSchemePattern`, so the same split applies to it. Tests pin both.
+`schemePolicy` selects the derivation: upstream `"prefix"` uses the escaped profile slug plus
+`(?:-[a-z]+)?`; standalone `"exact"` uses only the three escaped profile schemes. No upstream brand
+literal lives in `brand.ts`; tests pin the upstream pattern's `.source` and empty `.flags`.
 
 ### 2.5 What stays T3-named (KEEP)
 

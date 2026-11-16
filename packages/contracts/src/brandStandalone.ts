@@ -19,6 +19,7 @@ export function defineStandaloneBrand(): BrandProfile {
     homeDirName: `.${slug}`,
     cliName: slug,
     repository,
+    schemePolicy: "exact",
     schemes: {
       production: slug,
       development: `${slug}-dev`,
@@ -54,6 +55,7 @@ export function defineStandaloneBrand(): BrandProfile {
       userDataDirName: slug,
       devUserDataDirName: `${slug}-dev`,
       legacyUserDataDirName: null,
+      devLegacyUserDataDirName: null,
       legacyLocalStorageProfileNames: [],
       appUserModelId: reverseDns,
       devAppUserModelId: `${reverseDns}.dev`,
@@ -73,6 +75,7 @@ export function defineStandaloneBrand(): BrandProfile {
       windowsSubkey: `SOFTWARE\\Policies\\${author}\\${name}`,
     },
     mobile: {
+      expoSlug: slug,
       appName: name,
       androidPackage: reverseDns,
       iosBundleIdentifier: reverseDns,

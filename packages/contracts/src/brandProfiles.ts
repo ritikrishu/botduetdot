@@ -7,6 +7,7 @@ export interface BrandProfile {
   readonly homeDirName: string;
   readonly cliName: string;
   readonly repository: string;
+  readonly schemePolicy: "prefix" | "exact";
   readonly schemes: {
     readonly production: string;
     readonly development: string;
@@ -50,6 +51,7 @@ export interface BrandProfile {
     readonly userDataDirName: string;
     readonly devUserDataDirName: string;
     readonly legacyUserDataDirName: string | null;
+    readonly devLegacyUserDataDirName: string | null;
     readonly legacyLocalStorageProfileNames: readonly string[];
     readonly appUserModelId: string;
     readonly devAppUserModelId: string;
@@ -63,6 +65,7 @@ export interface BrandProfile {
   readonly service: { readonly launchdLabel: string; readonly systemdUnitName: string };
   readonly managedPolicy: { readonly macDomain: string; readonly windowsSubkey: string };
   readonly mobile: {
+    readonly expoSlug: string;
     readonly appName: string;
     readonly androidPackage: string;
     readonly iosBundleIdentifier: string;
@@ -84,6 +87,7 @@ function defineUpstreamBrand(): BrandProfile {
     homeDirName: ".t3",
     cliName: "t3",
     repository: "pingdotgg/t3code",
+    schemePolicy: "prefix",
     schemes: {
       production: "t3code",
       development: "t3code-dev",
@@ -128,6 +132,7 @@ function defineUpstreamBrand(): BrandProfile {
       userDataDirName: "t3code-v2",
       devUserDataDirName: "t3code-dev",
       legacyUserDataDirName: "T3 Code (Alpha)",
+      devLegacyUserDataDirName: "T3 Code (Dev)",
       legacyLocalStorageProfileNames: ["T3 Code (Alpha)", "t3code"],
       appUserModelId: "com.t3tools.t3code",
       devAppUserModelId: "com.t3tools.t3code.dev",
@@ -148,6 +153,7 @@ function defineUpstreamBrand(): BrandProfile {
       windowsSubkey: "SOFTWARE\\Policies\\T3Tools\\T3Code",
     },
     mobile: {
+      expoSlug: "t3-code",
       appName: "T3 Code",
       androidPackage: "com.t3tools.t3code",
       iosBundleIdentifier: "com.t3tools.t3code",

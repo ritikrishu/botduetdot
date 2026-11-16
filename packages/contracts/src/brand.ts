@@ -29,12 +29,15 @@ export function brandAppSchemes(brand: BrandProfile): readonly string[] {
   return [brand.schemes.production, brand.schemes.development, brand.schemes.preview];
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export function brandAppSchemePattern(brand: BrandProfile): RegExp {
-  // Upstream pairing/prompt parsers also accept channels such as t3code-nightly:.
-  if (brand.id === "upstream") return /^t3code(?:-[a-z]+)?:$/;
-  const schemes = brandAppSchemes(brand).map((scheme) =>
-    scheme.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-  );
+  if (brand.schemePolicy === "prefix") {
+    return new RegExp(`^${escapeRegExp(brand.slug)}(?:-[a-z]+)?:$`);
+  }
+  const schemes = brandAppSchemes(brand).map(escapeRegExp);
   return new RegExp(`^(?:${schemes.join("|")}):$`);
 }
 
