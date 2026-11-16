@@ -2,6 +2,10 @@ const path = require("node:path");
 
 function withMobileBrandResolver(config, brand = process.env.T3CODE_BRAND) {
   if (brand !== "standalone") return config;
+  config.transformer = {
+    ...config.transformer,
+    babelTransformerPath: require.resolve("./transformer.cjs"),
+  };
   const mobileRoot = path.resolve(__dirname, "..");
   const observeStub = path.join(__dirname, "observe.standalone.ts");
   const replacements = new Map([

@@ -2,6 +2,7 @@ import "vite-plus/test/config";
 import { defaultInclude, defineConfig } from "vite-plus";
 
 import { isDesktopRuntimeExternalDependency } from "../../scripts/lib/desktop-external-packages.ts";
+import { brandTextPlugins } from "../../scripts/lib/brand-text.ts";
 import { brandBuildDefine } from "../../scripts/lib/brand-define.ts";
 import { loadRepoEnv } from "../../scripts/lib/public-config.ts";
 
@@ -58,6 +59,7 @@ export default defineConfig({
   },
   pack: [
     {
+      plugins: brandTextPlugins(repoEnv),
       format: "cjs",
       outDir: "dist-electron",
       dts: false,
@@ -75,6 +77,7 @@ export default defineConfig({
       ...(shouldLaunchElectronAfterPack ? { onSuccess: "node scripts/dev-electron.mjs" } : {}),
     },
     {
+      plugins: brandTextPlugins(repoEnv),
       format: "cjs",
       outDir: "dist-electron",
       dts: false,
@@ -96,6 +99,7 @@ export default defineConfig({
     },
     {
       // boot.cjs requires the other two at runtime, so all three stay separate files.
+      plugins: brandTextPlugins(repoEnv),
       format: "cjs",
       outDir: "dist-electron",
       dts: false,
@@ -108,6 +112,7 @@ export default defineConfig({
       },
     },
     {
+      plugins: brandTextPlugins(repoEnv),
       format: "cjs",
       outDir: "dist-electron",
       dts: false,
@@ -121,6 +126,7 @@ export default defineConfig({
       },
     },
     {
+      plugins: brandTextPlugins(repoEnv),
       format: "cjs",
       outDir: "dist-electron",
       dts: false,
@@ -135,6 +141,7 @@ export default defineConfig({
       },
     },
     {
+      plugins: brandTextPlugins(repoEnv),
       format: "cjs",
       outDir: "dist-electron",
       dts: false,
@@ -144,6 +151,7 @@ export default defineConfig({
     },
     {
       // Sandboxed preloads must be self-contained, without shared runtime chunks.
+      plugins: brandTextPlugins(repoEnv),
       format: "cjs",
       outDir: "dist-electron",
       dts: false,

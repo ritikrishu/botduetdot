@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { validateVersion, validateVersionCode } from "./brand-leak-rules.ts";
+import { FORBIDDEN_PATTERNS, validateVersion, validateVersionCode } from "./brand-leak-rules.ts";
 
 describe("release versions", () => {
   it.each(["0.1.9-botduetdot.1", "1.0.0-botduetdot.20", "0.0.0-botduetdot.0"])(
@@ -39,4 +39,12 @@ describe("release versions", () => {
     for (const previous of ["2026111601", "2026111699", "NaN", "-1"])
       expect(() => validateVersionCode("2026111601", previous)).toThrow();
   });
+});
+
+it("gates every upstream display name, including names already caught as profiles", () => {
+  const rule = FORBIDDEN_PATTERNS.find(([name]) => name === "upstream-name")![1];
+  for (const value of ["T3 Code", "T3 Code (Alpha)", "Update T3 Code", "Sent by T3 Code"]) {
+    expect(new RegExp(rule).test(value)).toBe(true);
+  }
+  expect(new RegExp(rule).test("BotDuetDot T3Code t3code")).toBe(false);
 });

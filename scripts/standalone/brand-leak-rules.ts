@@ -38,6 +38,7 @@ export function validateVersionCode(value: string, previous?: string): number {
 }
 
 export const FORBIDDEN_PATTERNS = [
+  ["upstream-name", /T3 Code/g],
   ["t3-domain", /t3\.codes/gi],
   ["upstream-owner", /pingdotgg/gi],
   ["upstream-identifier", /com[./]t3tools/gi],
@@ -84,7 +85,40 @@ const schemaScopes = [
 ];
 
 // Counts are from the arm64 0.1.9-botduetdot.1 build; scopes ignore only content hashes.
+export const ABOUT_CREDITS = "Based on T3 Code © 2026 T3 Tools Inc. (MIT License)";
+
+// Hermes stores the runtime credit and the embedded preview script's credit as UTF-16LE.
+export const HERMES_COUNTED_EXEMPTIONS: readonly CountedExemption[] = [
+  {
+    scope: /^base\/assets\/index\.android\.bundle$/,
+    literal: `${ABOUT_CREDITS.split("").join("\0")}\0`,
+    count: 2,
+    reason: "MIT attribution in the runtime profile and embedded preview script (contract r9)",
+    source: "packages/contracts/src/brandStandalone.ts:66",
+    text: true,
+  },
+];
+
 export const COUNTED_EXEMPTIONS: readonly CountedExemption[] = [
+  ...[
+    server("ManagedEndpointRuntime"),
+    main,
+    /(?:^|\/)apps\/server\/dist\/client\/assets\/index-[^/]+\.js$/,
+  ].map((scope) => ({
+    scope,
+    literal: ABOUT_CREDITS,
+    count: 1,
+    reason: "MIT attribution retained verbatim (contract r9)",
+    source: "packages/contracts/src/brandStandalone.ts:66",
+  })),
+  {
+    scope: /(?:^|\/)apps\/server\/dist\/client\/third-party-licenses\.json$/,
+    literal: '"license":"MIT","name":"T3 Code","noticeText":"MIT License',
+    count: 1,
+    reason: "The generated MIT notice names the upstream work (contract r5)",
+    source: "third-party-licenses.config.json:4",
+    text: true,
+  },
   ...["t3code://app", "t3code-dev://app"].map((literal) => ({
     scope: server("relayTracing"),
     literal,

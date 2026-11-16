@@ -1,0 +1,63 @@
+import * as NodeModule from "node:module";
+import * as NodePath from "node:path";
+import {
+  STANDALONE_BRAND,
+  UPSTREAM_BRAND,
+  type BrandProfile,
+} from "@t3tools/contracts/brandProfiles";
+import { expect, it, vi } from "vite-plus/test";
+
+const require = NodeModule.createRequire(import.meta.url);
+type Args = { src: string; filename: string; options: object; plugins?: unknown[] };
+type Result = { code: string; map: NodeModule.SourceMapPayload };
+type Transformer = { transform: (args: Args) => Result; getCacheKey: () => string };
+const { createBrandTransformer } = require("./transformer.cjs") as {
+  createBrandTransformer: (delegate: Transformer, brand: BrandProfile) => Transformer;
+};
+const { transformSync } = require("@babel/core") as {
+  transformSync: (src: string, options: object) => Result;
+};
+const filename = NodePath.resolve(import.meta.dirname, "../src/example.tsx");
+const args: Args = { src: 'const x = "T3 Code";', filename, options: {} };
+
+it("delegates upstream and excluded modules unchanged, with separate brand cache keys", () => {
+  const result = { code: "unchanged", map: {} as NodeModule.SourceMapPayload };
+  const delegate = { transform: vi.fn((_args: Args) => result), getCacheKey: () => "expo-key" };
+  const upstream = createBrandTransformer(delegate, UPSTREAM_BRAND);
+  expect(upstream.transform(args)).toBe(result);
+  expect(delegate.transform.mock.calls[0]?.[0]).toBe(args);
+  const standalone = createBrandTransformer(delegate, STANDALONE_BRAND);
+  for (const path of ["node_modules/lib/index.js", "packages/contracts/src/brandStandalone.ts"]) {
+    const excluded = { ...args, filename: NodePath.resolve(import.meta.dirname, "../../..", path) };
+    expect(standalone.transform(excluded)).toBe(result);
+    expect(delegate.transform).toHaveBeenLastCalledWith(excluded);
+  }
+  expect(standalone.getCacheKey()).not.toBe(upstream.getCacheKey());
+});
+
+it("rewrites Metro strings, templates, regexes and JSX while preserving source positions", () => {
+  const delegate: Transformer = {
+    getCacheKey: () => "expo-key",
+    transform: ({ src, filename, plugins }) =>
+      transformSync(src, {
+        filename,
+        plugins,
+        babelrc: false,
+        configFile: false,
+        sourceMaps: true,
+        parserOpts: { plugins: ["jsx", "typescript"] },
+      }),
+  };
+  const transformer = createBrandTransformer(delegate, STANDALONE_BRAND);
+  const src =
+    'const label = "T3 Code"; const next = 1;\nconst prompt = `T3 Code ${next}`;\nconst jsx = <p title="T3 Code">T3 Code</p>;\nconst re = /T3 Code/;';
+  const result = transformer.transform({ ...args, src });
+  expect(result.code).not.toContain("T3 Code");
+  expect(result.code.match(/BotDuetDot/g)).toHaveLength(5);
+  const lines = result.code.split("\n");
+  const line = lines.findIndex((text) => text.includes("const next"));
+  const map = new NodeModule.SourceMap(result.map);
+  const entry = map.findEntry(line, lines[line]!.indexOf("const next")) as NodeModule.SourceMapping;
+  expect(entry.originalLine).toBe(0);
+  expect(entry.originalColumn).toBe(src.indexOf("const next"));
+});

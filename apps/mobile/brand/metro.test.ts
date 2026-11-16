@@ -5,7 +5,10 @@ import { expect, it, vi } from "vite-plus/test";
 
 const require = NodeModule.createRequire(import.meta.url);
 type Resolver = NonNullable<NonNullable<MetroConfig["resolver"]>["resolveRequest"]>;
-type ResolverConfig = { resolver: { resolveRequest?: Resolver } };
+type ResolverConfig = {
+  resolver: { resolveRequest?: Resolver };
+  transformer?: { babelTransformerPath?: string };
+};
 const { withMobileBrandResolver } = require("./metro.cjs") as {
   withMobileBrandResolver: (config: ResolverConfig, brand?: string) => ResolverConfig;
 };
@@ -22,14 +25,17 @@ function setup() {
 
 it("leaves the upstream resolver unchanged", () => {
   const { resolveRequest } = setup();
-  const config = { resolver: { resolveRequest } };
+  const transformer = { babelTransformerPath: "upstream-transformer" };
+  const config = { resolver: { resolveRequest }, transformer };
   expect(withMobileBrandResolver(config, "upstream")).toBe(config);
   expect(config.resolver.resolveRequest).toBe(resolveRequest);
+  expect(config.transformer).toBe(transformer);
 });
 
 it("removes Observe entry points and T3 asset modules from standalone resolution", () => {
   const { context, resolveRequest } = setup();
   const config = withMobileBrandResolver({ resolver: {} }, "standalone");
+  expect(config.transformer?.babelTransformerPath).toBe(require.resolve("./transformer.cjs"));
   const resolve = config.resolver!.resolveRequest!;
   for (const moduleName of ["expo-observe", "src/features/observability/observe.ts"]) {
     expect(resolve(context, moduleName, "android")).toEqual({

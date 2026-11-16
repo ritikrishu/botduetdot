@@ -21,7 +21,12 @@ import {
   scanText,
   type ScanFile,
 } from "./check-brand-leaks.ts";
-import { type CountedExemption } from "./brand-leak-rules.ts";
+import {
+  ABOUT_CREDITS,
+  COUNTED_EXEMPTIONS,
+  HERMES_COUNTED_EXEMPTIONS,
+  type CountedExemption,
+} from "./brand-leak-rules.ts";
 
 const fixture = (name: string) =>
   NodeFS.readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
@@ -48,7 +53,12 @@ describe("artifact leak rules", () => {
     "${HOME}/.t3/state",
     "$HOME/.t3",
     "t3code-v2",
+    "T3 Code",
+    "T3 Code (Dev)",
+    "T3 Code (Nightly)",
     "T3 Code (Alpha)",
+    String.raw`"T3\u0020Code"`,
+    '"T3 " + "Code"',
     "t3code://pair",
     '"t3code:"',
     '"t3code-dev"',
@@ -74,9 +84,7 @@ describe("artifact leak rules", () => {
   it("keeps internal namespaces and preview partitions", () => {
     expect(
       scanText(
-        js(
-          '"t3code:theme"; "t3code-preview-session"; "--t3code-preview-passkey-bridge"; "T3 Code (Dev)"; "T3 Code (Nightly)"',
-        ),
+        js('"t3code:theme"; "t3code-preview-session"; "--t3code-preview-passkey-bridge"'),
         [],
       ),
     ).toEqual([]);
@@ -213,22 +221,73 @@ describe("artifact leak rules", () => {
       scanText(js("removed", scope), []).some((item) => item.rule.startsWith("bare-name-count")),
     ).toBe(true);
   });
-  it("gives Hermes zero exemptions and catches scheme fragments without quotes", () => {
+  it("allows only counted Hermes attribution and still catches names and scheme fragments", () => {
+    const credit = HERMES_COUNTED_EXEMPTIONS[0]!.literal;
     const file = {
       artifact: "fixture.aab!/base/assets/index.android.bundle",
       scope: "base/assets/index.android.bundle",
-      text: "\x00t3code\x00://\x00.t3\x00t3.codes\x00",
+      text: `\x00${credit}\x00${credit}\x00t3code\x00://\x00.t3\x00t3.codes\x00T3 Code\x00${Buffer.from("Update T3 Code", "utf16le").toString("latin1")}`,
       javascript: false,
     };
     const result = scanText(file);
     expect(result.filter((item) => item.rule === "hermes-upstream-identity")).toHaveLength(2);
     expect(result.some((item) => item.rule === "t3-domain")).toBe(true);
+    const names = result.filter((item) => item.rule === "upstream-name");
+    expect(names).toHaveLength(2);
+    expect(names.map((item) => item.offset)).toEqual([
+      file.text.indexOf("T3 Code"),
+      file.text.lastIndexOf(Buffer.from("T3 Code", "utf16le").toString("latin1")),
+    ]);
+    expect(scanText({ ...file, text: `${credit}\0${credit}` })).toEqual([]);
+    for (const text of [credit, `${credit}\0${credit}\0${credit}`]) {
+      const failures = scanText({ ...file, text });
+      expect(failures.some((item) => item.rule.startsWith("exemption-count"))).toBe(true);
+      expect(failures.some((item) => item.rule === "upstream-name")).toBe(true);
+    }
+    expect(
+      scanText({ ...file, text: credit, scope: "other/index.android.bundle" }).map(
+        (item) => item.rule,
+      ),
+    ).toEqual(["upstream-name"]);
+    expect(
+      scanText({ ...file, text: ABOUT_CREDITS }).some((item) => item.rule === "upstream-name"),
+    ).toBe(true);
+  });
+  it("counts only the complete MIT credit and rejects extra app-name copy", () => {
+    const scope = "apps/server/dist/client/assets/index-fixture.js";
+    const exemptions = COUNTED_EXEMPTIONS.filter(
+      (item) => item.literal === ABOUT_CREDITS && item.scope.test(scope),
+    );
+    expect(exemptions).toHaveLength(1);
+    expect(scanText(js(ABOUT_CREDITS, scope), exemptions, false)).toEqual([]);
+    expect(
+      scanText(js(`${ABOUT_CREDITS} T3 Code`, scope), exemptions, false).map((item) => item.rule),
+    ).toEqual(["upstream-name"]);
+    for (const text of ["removed", `${ABOUT_CREDITS} ${ABOUT_CREDITS}`]) {
+      expect(
+        scanText(js(text, scope), exemptions, false).some((item) =>
+          item.rule.startsWith("exemption-count"),
+        ),
+      ).toBe(true);
+    }
+    expect(
+      scanText(js(ABOUT_CREDITS, "unrelated.js"), exemptions, false).map((item) => item.rule),
+    ).toEqual(["upstream-name"]);
   });
   it("reports original offsets for escaped text and redacts key material", () => {
     const text = String.raw`const ignored="\u0041"; const key="pk_live_abcdefghijkl";`;
     const hit = scanText(js(text), []).find((item) => item.rule === "clerk-key")!;
     expect(hit.offset).toBe(text.indexOf("pk_live_"));
     expect(hit.context).not.toContain("abcdefghijkl");
+    const binary = Buffer.from("phc_fixture_secret", "utf16le").toString("latin1");
+    const hermes = scanText(
+      { ...js(binary, "base/assets/index.android.bundle"), javascript: false },
+      [],
+    );
+    expect(hermes[0]?.rule).toBe("posthog-key");
+    expect(hermes[0]?.offset).toBe(0);
+    expect(hermes[0]?.context).toContain("[redacted key]");
+    expect(hermes[0]?.context).not.toContain("fixture_secret");
     expect(redact("value local-password", { CSC_KEY_PASSWORD: "local-password" })).toBe(
       "value [redacted]",
     );

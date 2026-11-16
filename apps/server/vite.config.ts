@@ -4,6 +4,7 @@ import * as NodePath from "node:path";
 import { defineConfig, mergeConfig } from "vite-plus";
 
 import baseConfig from "../../vite.config.ts";
+import { brandTextPlugins } from "../../scripts/lib/brand-text.ts";
 import { brandBuildDefine } from "../../scripts/lib/brand-define.ts";
 import { loadRepoEnv } from "../../scripts/lib/public-config.ts";
 import rootPackageJson from "../../package.json" with { type: "json" };
@@ -89,6 +90,7 @@ export default mergeConfig(
       },
     },
     pack: {
+      plugins: brandTextPlugins(repoEnv),
       // SEA embeds one entry; expose the history worker as a hidden subcommand.
       entry: packBootstrap
         ? ["src/bin.ts"]

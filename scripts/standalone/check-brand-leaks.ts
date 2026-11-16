@@ -19,6 +19,7 @@ import {
   DERIVED_CACHE_SCOPE,
   FORBIDDEN_ENTITLEMENTS,
   FORBIDDEN_PATTERNS,
+  HERMES_COUNTED_EXEMPTIONS,
   RELEASE_IDENTITY,
   validateVersion,
   validateVersionCode,
@@ -61,10 +62,9 @@ export function finding(artifact: string, rule: string, text: string, offset = 0
     artifact,
     rule,
     offset,
-    context: redact(text.slice(Math.max(0, offset - 30), Math.max(0, offset - 30) + 80)).replace(
-      /[\s\p{Cc}]/gu,
-      " ",
-    ),
+    context: redact(
+      decodeHermesText(text.slice(Math.max(0, offset - 30), Math.max(0, offset - 30) + 80)).text,
+    ).replace(/[\s\p{Cc}]/gu, " "),
   };
 }
 
@@ -98,9 +98,24 @@ function decodeEscapes(text: string) {
   };
 }
 
+function decodeHermesText(text: string) {
+  const edits: { at: number; extra: number }[] = [];
+  let extra = 0;
+  const decoded = text.replace(/(?:[\x20-\x7e\xa0-\xff]\0){4,}/g, (whole, at: number) => {
+    edits.push({ at: at - extra, extra: whole.length / 2 });
+    extra += whole.length / 2;
+    return whole.replaceAll("\0", "");
+  });
+  return {
+    text: decoded,
+    originalOffset: (at: number) =>
+      at + edits.reduce((sum, edit) => sum + Math.max(0, Math.min(at - edit.at, edit.extra)), 0),
+  };
+}
+
 export function scanText(
   file: ScanFile,
-  exemptions: readonly CountedExemption[] = COUNTED_EXEMPTIONS,
+  exemptions: readonly CountedExemption[] = [...COUNTED_EXEMPTIONS, ...HERMES_COUNTED_EXEMPTIONS],
   countBare = true,
 ): Finding[] {
   const findings: Finding[] = [];
@@ -124,7 +139,9 @@ export function scanText(
   }
   const normalized = file.javascript
     ? decodeEscapes(text)
-    : { text, originalOffset: (at: number) => at };
+    : /index\.android\.bundle$/.test(file.scope)
+      ? decodeHermesText(text)
+      : { text, originalOffset: (at: number) => at };
   const addMatches = (rule: string, pattern: RegExp) => {
     for (const match of normalized.text.matchAll(new RegExp(pattern.source, pattern.flags))) {
       const offset = normalized.originalOffset(match.index);

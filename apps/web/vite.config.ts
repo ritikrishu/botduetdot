@@ -19,6 +19,7 @@ import {
   DEV_PROXIED_PATH_PREFIXES,
 } from "@t3tools/shared/devProxy";
 
+import { brandTextPlugins } from "../../scripts/lib/brand-text.ts";
 import { brandBuildDefine } from "../../scripts/lib/brand-define";
 import { loadRepoEnv } from "../../scripts/lib/public-config";
 import { thirdPartyLicensesPlugin } from "../../scripts/lib/third-party-licenses";
@@ -270,6 +271,7 @@ export default defineConfig(() => {
     },
     assetsInclude: ["**/*.wasm"],
     plugins: [
+      ...brandTextPlugins(process.env),
       {
         name: "t3code:brand-html",
         transformIndexHtml: (html) => transformBrandHtml(html, brand),
@@ -398,7 +400,10 @@ export default defineConfig(() => {
         },
       },
     },
-    worker: { format: "es" },
+    worker: {
+      format: "es",
+      ...(brand.id === "standalone" ? { plugins: () => brandTextPlugins(process.env) } : {}),
+    },
     test: {
       projects: [
         defineProject(unitTestProject),
