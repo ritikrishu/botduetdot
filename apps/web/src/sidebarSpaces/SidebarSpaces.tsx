@@ -44,7 +44,8 @@ function SpaceChip({ dimmed, ...props }: ComponentProps<"button"> & { dimmed?: b
       {...props}
       type="button"
       className={cn(
-        "relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-sidebar-muted-foreground outline-none hover:bg-sidebar-row-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring aria-pressed:bg-accent aria-pressed:text-sidebar-foreground",
+        // The selected space must read at a glance: a primary tint and outline, not the hover grey.
+        "group relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-md text-sidebar-muted-foreground outline-none hover:bg-sidebar-row-hover focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring aria-pressed:bg-primary/20 aria-pressed:text-sidebar-foreground aria-pressed:ring-1 aria-pressed:ring-inset aria-pressed:ring-primary aria-pressed:hover:bg-primary/25",
         dimmed && "opacity-50",
       )}
     />
@@ -189,7 +190,12 @@ function SidebarSpacesStrip(props: {
               <SidebarSpaceGlyph
                 icon={space.space.icon}
                 name={space.space.name}
-                className="size-4 text-sm leading-4"
+                className={cn(
+                  "size-4 text-sm leading-4",
+                  // Emoji ignore text colour, so unselected glyphs dim to let the selected one stand out.
+                  !selected &&
+                    "opacity-60 grayscale-60 group-hover:opacity-100 group-hover:grayscale-0",
+                )}
               />
               {needsYou ? (
                 <span
