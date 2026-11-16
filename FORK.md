@@ -29,6 +29,27 @@ Use a disposable copied home for migration tests; never point standalone at live
 The preview/iPhone instructions below describe the earlier Sidebar Spaces fork, not standalone
 releases. Shared-home warnings apply only if you deliberately reuse an official home.
 
+### Standalone decision log
+
+The working contract that drove the standalone build is in git history
+(`git show bea6b98ece:FORK-STANDALONE-CONTRACT.md`, seams S1–S57). Code comments cite these decisions:
+
+- **r3:** the upstream scheme pattern stays `^t3code(?:-[a-z]+)?:$`; standalone accepts only its own schemes.
+- **r4:** never widen an upstream allowlist; derive standalone sets from brand fields.
+- **r5:** the T3 Code MIT notice ships in both brands (licence screens and About credits).
+- **r6:** triage is off in standalone, gated in `TriageService.prepare` as well as the UI.
+- **r7:** with `features.t3Connect` off, the T3 Connect runtime is inert and never reads, applies,
+  writes or clears persisted relay or tunnel secrets.
+- **r8:** the leak gate matches real key shapes, lets the MIT notice opt into a text exemption and
+  treats the V8 compile cache as derived from scanned JS.
+- **r9:** standalone bundles rewrite upstream copy at bundle time (`scripts/lib/brand-text.ts`);
+  upstream builds are byte-identical.
+- **r10:** Android ships only the standalone profile, and the release gate scans the same bundle as
+  JavaScript beside the Hermes byte scan.
+- **r11:** the MIT credit appears twice in Android (the preview WebView reads `BRAND`). Native strings
+  come from resources the standalone plugin overrides, the gate scans `base/dex` and `base/lib`,
+  `npx t3@` and "T3 home" are gated, and the managed-policy path comes from the brand.
+
 ## Design decisions and known limits
 
 Server settings are the only existing store every client receives; client settings are local
@@ -94,7 +115,7 @@ and `apps/mobile/src/features/home/spaces/`, with tests beside it and
 ### Standalone seams
 
 Derived from `git diff --stat v0.1.9..HEAD`, excluding new files; unabridged names come from
-`git diff --name-only --diff-filter=MDRT v0.1.9..HEAD`. Cross-checked against contract S1–S57 and amendments r3–r10.
+`git diff --name-only --diff-filter=MDRT v0.1.9..HEAD`. Cross-checked against the working contract's seams S1–S57 and the decision log below (r3–r11).
 Standalone builds also rewrite "T3 Code" and quoted `t3` CLI copy at bundle time
 (`scripts/lib/brand-text.ts`), so most upstream copy needs no seam. The Spaces table above remains
 part of this inventory. Refresh both tables after integration and each upgrade.

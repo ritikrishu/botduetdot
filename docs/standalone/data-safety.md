@@ -26,7 +26,7 @@ the owner must confirm that interpretation and any demo-server handling before s
 | Ads, default analytics, crash reporting, push?     | No ads integration in the standalone configuration; analytics off; no relay-backed crash delivery or push. Confirm merged manifest/SDK behavior before release.                                                | [Brand defaults](../../packages/contracts/src/brandStandalone.ts), [mobile overlay](../../apps/mobile/brand.config.ts), [crash delivery gate](../../apps/mobile/src/features/observability/observe.ts)        |
 | Location, contacts, health, financial information? | No dedicated collection in reviewed standalone connection/upload paths. User-supplied text/files can contain sensitive information; do not describe uploaded content as anonymous.                             | [Metadata fields](../../apps/mobile/src/lib/authClientMetadata.ts), [upload](../../apps/mobile/src/lib/attachmentUpload.ts)                                                                                   |
 
-The contract's conservative draft marked every content type required. Photos/files/audio are optional
+An earlier conservative draft marked every content type required. Photos/files/audio are optional
 in this draft because users can choose not to attach/record them; validate the final Console choices.
 Camera access for QR scanning is not a claim that camera footage is uploaded. The merged manifest
 of the first release AAB was reviewed on 2026-11-16. Runtime prompts are camera (QR pairing),

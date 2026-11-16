@@ -155,12 +155,21 @@ supplied export matches the AAB's build environment. Use the wrapper for release
 JS-only check, pass `--android-js BUNDLE` alone; it does not check the AAB. Remove the temporary export
 after inspection. [Expo CLI options](https://docs.expo.dev/more/expo-cli/#exporting) describe the export.
 
-Before first publication and after relevant upstream changes, complete contract integration A–G:
-isolated explicit/default homes, official-app coexistence, brand-only deep links and pairing,
-no upstream startup network, update download/install between two fork versions, and Android install/pairing.
-The prerelease-shaped version's behavior in electron-updater remains a release gate: test with
-`--mock-updates` and `vp run start:mock-update-server` before promising updates. Bundled upstream-profile
-elimination is also unverified until scans pass. Windows, Linux, Intel Mac and standalone iOS are outside v1.
+Before first publication and after relevant upstream changes, run these integration checks:
+
+- **A, explicit home:** with `T3CODE_HOME` set to a temporary folder, the app writes only there and
+  never touches `~/.t3` or `~/.botduetdot`.
+- **B, default home:** with a fake `HOME` holding a seeded `.t3`, the app creates `.botduetdot` and
+  leaves `.t3` byte-identical.
+- **C, coexistence:** BotDuetDot and the official app run together without opening each other's files.
+- **D, links:** `botduetdot://new?prompt=hi` opens a draft and `t3code://` still opens the official app.
+  Settings has no update-track row and the command palette no triage entry.
+- **E, network:** no connections to `*.t3.codes`, Expo, npm or the upstream GitHub owner.
+- **F, update:** a signed `.N` installed from the DMG updates to `.N+1` published by the wrapper.
+- **G, Android:** the checked AAB installs beside the official app, opens `botduetdot://` links and pairs.
+  The prerelease-shaped version's behavior in electron-updater remains a release gate: test with
+  `--mock-updates` and `vp run start:mock-update-server` before promising updates. Bundled upstream-profile
+  elimination is also unverified until scans pass. Windows, Linux, Intel Mac and standalone iOS are outside v1.
 
 ## Test a build on your Mac before publishing
 
