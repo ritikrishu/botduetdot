@@ -82,10 +82,17 @@ it("renames t3@ labels across template expressions but leaves npm commands", () 
     "const b = `${runner} t3@${v}`;",
     "const c = `npx t3@${v} pair`;",
     "const d = `t3@${v} is a preview build.`;",
+    "const e = `t3 update`;",
+    "const f = `t3`;",
+    "const g = `t3 pair --base-dir ${v}`;",
   ].join("\n");
   const code = transformer.transform({ ...args, src }).code;
   expect(code).toContain("Reconnected on botduetdot@${v}. Use a separate BotDuetDot home.");
   expect(code).toContain("${runner} t3@${v}");
   expect(code).toContain("npx t3@${v} pair");
   expect(code).toContain("`botduetdot@${v} is a preview build.`");
+  // A template's own backticks count, as in the plain-text rewrite of the other bundles.
+  expect(code).toContain("const e = `botduetdot update`;");
+  expect(code).toContain("const f = `botduetdot`;");
+  expect(code).toContain("const g = `botduetdot pair --base-dir ${v}`;");
 });
