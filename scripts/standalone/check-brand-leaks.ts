@@ -538,16 +538,29 @@ export function assertNoFindings(findings: readonly Finding[]): void {
       `Release blocked by ${findings.length} brand/identity findings:\n${formatFindings(findings)}`,
     );
 }
+/**
+ * Inspects artifacts and hands `emit` the digests of the exact bytes that passed. Output must be
+ * produced with `copyVerified` against those digests, never by re-hashing the source, so a file
+ * swapped after inspection cannot be emitted or published.
+ */
 export function gateArtifacts<T>(
   files: readonly string[],
   inspect: () => readonly Finding[],
-  emit: () => T,
+  emit: (verified: readonly string[]) => T,
 ): T {
-  const before = files.map(sha256);
+  const verified = files.map(sha256);
   assertNoFindings(inspect());
-  if (files.some((file, index) => sha256(file) !== before[index]))
+  if (files.some((file, index) => sha256(file) !== verified[index]))
     throw new Error("Artifact changed during verification; refusing output.");
-  return emit();
+  return emit(verified);
+}
+/** Copies an artifact and proves the copy holds exactly the verified bytes, or removes it. */
+export function copyVerified(source: string, target: string, digest: string): void {
+  NodeFS.copyFileSync(source, target, NodeFS.constants.COPYFILE_EXCL);
+  if (sha256(target) !== digest) {
+    NodeFS.rmSync(target, { force: true });
+    throw new Error("Artifact changed after verification; refusing output.");
+  }
 }
 export function formatFindings(findings: readonly Finding[]): string {
   return findings

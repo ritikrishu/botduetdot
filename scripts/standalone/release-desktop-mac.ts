@@ -15,6 +15,7 @@ import {
   command,
   print,
   printError,
+  copyVerified,
   gateArtifacts,
   redact,
   REPO_ROOT,
@@ -168,6 +169,16 @@ function requireReleaseAbsent(version: string): void {
   ]);
   if (response.status === 0 || !/^HTTP\/[\d.]+ 404\b/m.test(response.stdout))
     throw new Error("Could not prove the release is absent (check gh authentication/network).");
+  // gh release create reuses an existing tag even when --target names another commit.
+  const ref = command("gh", [
+    "api",
+    `repos/${RELEASE_IDENTITY.repository}/git/ref/tags/${tag}`,
+    "--include",
+  ]);
+  if (ref.status === 0 || !/^HTTP\/[\d.]+ 404\b/m.test(ref.stdout))
+    throw new Error(
+      `Tag ${tag} already exists on GitHub or could not be checked; choose a new version.`,
+    );
   const repository = JSON.parse(
     run("gh", ["repo", "view", RELEASE_IDENTITY.repository, "--json", "isPrivate"]),
   ) as { isPrivate: boolean };
@@ -266,26 +277,23 @@ export function main(args = process.argv.slice(2)): void {
       { env },
     );
     const files = macReleaseFiles(temporary, version);
-    gateArtifacts(
+    const verified = gateArtifacts(
       files,
       () => {
         verifyMacContainers(temporary, version, env.STANDALONE_APPLE_TEAM_ID!);
         return checkMacRelease(temporary, version);
       },
-      () => {
+      (digests) => {
         if (requireCleanTree() !== commit)
           throw new Error("Checkout changed during the release build.");
         NodeFS.mkdirSync(NodePath.dirname(output), { recursive: true });
         const stage = NodeFS.mkdtempSync(NodePath.join(NodePath.dirname(output), ".verified-"));
         try {
-          for (const file of files) {
-            const target = NodePath.join(stage, NodePath.basename(file));
-            NodeFS.copyFileSync(file, target, NodeFS.constants.COPYFILE_EXCL);
-            if (sha256(file) !== sha256(target)) throw new Error("Artifact copy hash mismatch.");
-          }
+          for (const [index, file] of files.entries())
+            copyVerified(file, NodePath.join(stage, NodePath.basename(file)), digests[index]!);
           NodeFS.writeFileSync(
             NodePath.join(stage, "SHA256SUMS"),
-            files.map((file) => `${sha256(file)}  ${NodePath.basename(file)}\n`).join(""),
+            files.map((file, index) => `${digests[index]}  ${NodePath.basename(file)}\n`).join(""),
           );
           NodeFS.writeFileSync(
             NodePath.join(stage, "build.json"),
@@ -305,6 +313,7 @@ export function main(args = process.argv.slice(2)): void {
         } finally {
           NodeFS.rmSync(stage, { recursive: true, force: true });
         }
+        return digests;
       },
     );
     if (values.publish) {
@@ -312,8 +321,8 @@ export function main(args = process.argv.slice(2)): void {
       const notesPath = NodePath.join(temporary, "release-notes.md");
       NodeFS.writeFileSync(notesPath, notes, { mode: 0o600 });
       requireReleaseAbsent(version);
-      if (publishedFiles.some((file, index) => sha256(file) !== sha256(files[index]!)))
-        throw new Error("Published artifact hash changed.");
+      if (publishedFiles.some((file, index) => sha256(file) !== verified[index]))
+        throw new Error("Artifact changed after verification; refusing to publish.");
       run("gh", [
         "release",
         "create",

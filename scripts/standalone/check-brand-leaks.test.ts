@@ -14,6 +14,7 @@ import {
   checkProfiles,
   checkUpdateConfig,
   checkUpdateManifest,
+  copyVerified,
   gateArtifacts,
   redact,
   scanCollection,
@@ -374,4 +375,22 @@ it("the shared release gate emits nothing for a leaking fixture or a modified ch
   expect(NodeFS.existsSync(output)).toBe(false);
   gateArtifacts([artifact], () => [], emit);
   expect(NodeFS.readFileSync(output, "utf8")).toBe(NodeFS.readFileSync(artifact, "utf8"));
+});
+
+it("refuses an artifact swapped between verification and output", () => {
+  using temp = temporary();
+  const artifact = NodePath.join(temp.directory, "release.zip");
+  const output = NodePath.join(temp.directory, "published");
+  NodeFS.writeFileSync(artifact, "const safe = 1;");
+  expect(() =>
+    gateArtifacts(
+      [artifact],
+      () => scanText(js(NodeFS.readFileSync(artifact, "utf8")), []),
+      ([digest]) => {
+        NodeFS.writeFileSync(artifact, 'const host = "t3.codes";');
+        copyVerified(artifact, output, digest!);
+      },
+    ),
+  ).toThrow("changed after verification");
+  expect(NodeFS.existsSync(output)).toBe(false);
 });

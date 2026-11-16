@@ -12,6 +12,7 @@ import { validateVersion, validateVersionCode } from "./brand-leak-rules.ts";
 import {
   checkAndroidAab,
   command,
+  copyVerified,
   gateArtifacts,
   print,
   printError,
@@ -169,7 +170,7 @@ export function main(args = process.argv.slice(2)): void {
       staged,
       NodeFS.constants.COPYFILE_EXCL,
     );
-    gateArtifacts(
+    const verifiedDigest = gateArtifacts(
       [staged],
       () => {
         const certificate = run(
@@ -190,22 +191,17 @@ export function main(args = process.argv.slice(2)): void {
         );
         return checkAndroidAab(staged, version, code, toolEnv);
       },
-      () => {
+      ([digest]) => {
         if (requireCleanTree() !== commit)
           throw new Error("Checkout changed during release build.");
         NodeFS.mkdirSync(NodePath.dirname(output), { recursive: true });
         const stage = NodeFS.mkdtempSync(NodePath.join(NodePath.dirname(output), ".verified-"));
         try {
           const copy = NodePath.join(stage, NodePath.basename(output));
-          NodeFS.copyFileSync(staged, copy, NodeFS.constants.COPYFILE_EXCL);
-          if (sha256(copy) !== sha256(staged)) throw new Error("AAB changed during copy.");
-          NodeFS.writeFileSync(
-            `${output}.sha256`,
-            `${sha256(copy)}  ${NodePath.basename(output)}\n`,
-            {
-              flag: "wx",
-            },
-          );
+          copyVerified(staged, copy, digest!);
+          NodeFS.writeFileSync(`${output}.sha256`, `${digest}  ${NodePath.basename(output)}\n`, {
+            flag: "wx",
+          });
           NodeFS.writeFileSync(
             `${output}.build.json`,
             JSON.stringify(
@@ -225,9 +221,12 @@ export function main(args = process.argv.slice(2)): void {
         } finally {
           NodeFS.rmSync(stage, { recursive: true, force: true });
         }
+        return digest!;
       },
     );
-    print(`Verified Play upload AAB: ${output}\nSHA-256: ${sha256(output)}\nNothing uploaded.`);
+    if (sha256(output) !== verifiedDigest)
+      throw new Error("AAB changed after verification; do not upload it.");
+    print(`Verified Play upload AAB: ${output}\nSHA-256: ${verifiedDigest}\nNothing uploaded.`);
   } finally {
     NodeFS.rmSync(temporary, { recursive: true, force: true });
   }
