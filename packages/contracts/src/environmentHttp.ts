@@ -9,6 +9,7 @@ import * as HttpApiSchema from "effect/http-api/HttpApiSchema";
 import * as HttpServerRespondable from "effect/http/HttpServerRespondable";
 import * as HttpServerResponse from "effect/http/HttpServerResponse";
 
+import { brandRepositoryUrl } from "./brand.ts";
 import {
   AuthAccessTokenResult,
   AuthBrowserSessionRequest,
@@ -494,7 +495,7 @@ export type T3ConnectTroubleshootingSection = (typeof T3_CONNECT_TROUBLESHOOTING
 
 /** Clients, the CLI, and server logs link here as "More info". */
 export function t3ConnectTroubleshootingUrl(section: T3ConnectTroubleshootingSection): string {
-  return `https://github.com/pingdotgg/t3code/blob/main/docs/user/t3-connect-troubleshooting.md#${section}`;
+  return brandRepositoryUrl(`blob/main/docs/user/t3-connect-troubleshooting.md#${section}`);
 }
 
 const REACHABILITY_SECTION = {

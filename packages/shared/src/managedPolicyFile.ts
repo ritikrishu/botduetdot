@@ -3,6 +3,7 @@ import {
   ManagedPolicyDocument,
   SERVER_EXIT_CODE_MANAGED_POLICY,
 } from "@t3tools/contracts";
+import { BRAND } from "@t3tools/contracts/brand";
 import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Duration from "effect/Duration";
@@ -95,9 +96,8 @@ export const readManagedPolicyFile = Effect.fn("readManagedPolicyFile")(function
 });
 
 /** Where a configuration profile's managed preferences land on macOS. */
-export const MACOS_MANAGED_PREFERENCES_PATH =
-  "/Library/Managed Preferences/com.t3tools.t3code.plist";
-const WINDOWS_POLICY_SUBKEY = "SOFTWARE\\Policies\\T3Tools\\T3Code";
+export const MACOS_MANAGED_PREFERENCES_PATH = `/Library/Managed Preferences/${BRAND.managedPolicy.macDomain}.plist`;
+const WINDOWS_POLICY_SUBKEY = BRAND.managedPolicy.windowsSubkey;
 /**
  * The registry key Group Policy and Intune write to on Windows. It holds either the Group Policy
  * template's values, one per control, or a `Policy` string with the whole policy as JSON.
