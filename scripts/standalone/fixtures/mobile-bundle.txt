@@ -5,7 +5,7 @@ const notice = {
 };
 const schema = "https://t3.codes/schema/t3.json";
 const description = "See https://t3.codes for documentation.";
-const preview = "const schema=`https://t3.codes/schema/t3.json`; const description=`See https://t3.codes for documentation.`;";
+const preview = "const schema=`https://t3.codes/schema/t3.json`; const description=`See https://t3.codes for documentation.`; const credits=`Based on T3 Code \xa9 2026 T3 Tools Inc. (MIT License)`;";
 const resource = { "service.namespace": "t3code" };
 const aliases = new Set(["t3code"]);
 const showcase = { projectId: "t3code" };

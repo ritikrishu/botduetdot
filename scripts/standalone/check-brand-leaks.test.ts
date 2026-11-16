@@ -231,6 +231,7 @@ describe("artifact leak rules", () => {
     const utf16 = (text: string) => Buffer.from(text, "utf16le").toString("latin1");
     const literals = [
       utf16(ABOUT_CREDITS),
+      utf16(ABOUT_CREDITS),
       "T3 Code",
       "https://github.com/pingdotgg/t3code",
       "https://t3.codes/schema/t3.json",
