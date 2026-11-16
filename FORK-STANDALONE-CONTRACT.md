@@ -199,6 +199,18 @@ first-impression branding; **P2** = cosmetic or rare path.
 - `apps/marketing` (t3.codes site), `infra/relay`, `infra/task-cache`, `packaging/aur`, hosted web deploy: **OUT**.
 - `.github/workflows/*`: upstream pipelines are gated to `pingdotgg/t3code` (`release.yml:53`, `publish-aur.yml:40`, `mobile-eas-production.yml:77`, `deploy-relay.yml:29`, …) and use Blacksmith runners, task cache, Vercel, Discord, a release GitHub App and the relay config. **Not reusable**; Actions are currently **enabled** on `ritikrishu/botduetdot` (§7).
 - `LICENSE` (MIT, "Copyright (c) 2026 T3 Tools Inc."): KEEP unchanged. In-app license screens omit first-party `@t3tools/*` packages (`docs/internals/open-source-licenses.md`), so add the notice (S34) and About credits (S36).
+  **r8 amendment (orchestrator, from the T7 artifact scan):** the leak checker gates real identity and
+  credentials, not dormant code. (a) `clerk-key` matches a key shape (prefix + ≥10 base64 chars); bare
+  `pk_live_`/`pk_test_` in `@clerk/shared` and `relayAuth.ts` parsers stay, since `t3Connect: false` never
+  reaches them. (b) Counted exemptions may opt into one non-JS text file with `text: true`; the only user is
+  the r5 MIT notice `sourceUrl` in `third-party-licenses.json`. (c) `server-compile-cache/*` is V8 bytecode
+  derived from scanned server JS: it may hold permitted literals at any count, and every other pattern
+  still fails; the cache stays for startup speed. (d) Inert upstream doc comments
+  (`policyTemplates.ts:341`, server `cloud/publicConfig.ts:127`) and the GNOME extension UUID inlined in
+  `main.cjs` get counted exemptions instead of upstream-file edits (fewer merge conflicts). (e) Real fixes:
+  standalone web output drops `.well-known/` (no hosted domain to associate); the standalone mac package
+  excludes `prod-resources/installer.nsh` and `prod-resources/linux/`, stages a top-level `productName`,
+  and names BotDuetDot in Electron's default Bluetooth/audio-capture usage strings.
   **r7 amendment (orchestrator, from the T2a review):** `features.t3Connect === false` must make the whole
   T3 Connect runtime inert, not just the public config: `CloudLink` (startup reconciliation of persisted
   tunnel/relay state, `applyRelayConfig`, `linkProof`, `updatePreferences`, `answerHealthRequest`,

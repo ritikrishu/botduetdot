@@ -57,8 +57,8 @@ describe("artifact leak rules", () => {
     "com.t3tools.t3code",
     "pingdotgg",
     "phc_fake",
-    "pk_live_fixture",
-    "pk_test_fixture",
+    "pk_live_Y2xlcmsuZXhhbXBsZS5jb20k",
+    "pk_test_Y2xlcmsuZXhhbXBsZS5jb20k",
     'const scheme="t3code"; const url=`${scheme}://pair`;',
     'const s="t3code"; const url=`${s}://pair`;',
     'const s="t3code"; const url=s+"://pair";',
@@ -106,6 +106,69 @@ describe("artifact leak rules", () => {
       scanText({ ...js(exemption.literal), javascript: false }, [exemption]).some(
         (item) => item.rule === "t3-domain",
       ),
+    ).toBe(true);
+  });
+  it("allows the bare Clerk prefixes of dormant key parsers", () => {
+    expect(
+      scanText(js('k.startsWith("pk_test_")?"pk_test":k.startsWith("pk_live_")?"pk_live":"x"'), []),
+    ).toEqual([]);
+    expect(scanText(js("const key=`pk_live_${encoded}`;"), [])).toEqual([]);
+  });
+  it("applies a non-JavaScript exemption only when it opts in", () => {
+    const exemption: CountedExemption = {
+      scope: /third-party-licenses\.json$/,
+      literal: '"sourceUrl":"https://github.com/pingdotgg/t3code"',
+      count: 1,
+      reason: "MIT notice",
+      source: "fixture:1",
+    };
+    const notice: ScanFile = {
+      artifact: "client/third-party-licenses.json",
+      scope: "client/third-party-licenses.json",
+      text: `[{${exemption.literal}}]`,
+      javascript: false,
+    };
+    expect(scanText(notice, [exemption]).some((item) => item.rule === "upstream-owner")).toBe(true);
+    expect(scanText(notice, [{ ...exemption, text: true }])).toEqual([]);
+    expect(
+      scanText({ ...notice, text: `${notice.text} pingdotgg` }, [{ ...exemption, text: true }]),
+    ).toHaveLength(1);
+  });
+  it("lets a derived compile cache hold permitted literals at any count, and nothing else", () => {
+    const exemption: CountedExemption = {
+      scope: /server\.mjs$/,
+      literal: "https://t3.codes/schema/t3.json",
+      count: 1,
+      reason: "fixture",
+      source: "fixture:1",
+    };
+    const cache = (text: string): ScanFile => ({
+      artifact: "app/Contents/Resources/server-compile-cache/72616544",
+      scope: "app/Contents/Resources/server-compile-cache/72616544",
+      text,
+      javascript: false,
+    });
+    const source = js(exemption.literal, "apps/server/dist/server.mjs");
+    expect(
+      scanCollection(
+        [source, cache(`\x00${exemption.literal}\x00${exemption.literal}`)],
+        [exemption],
+        [],
+      ),
+    ).toEqual([]);
+    expect(
+      scanCollection(
+        [source, cache(`\x00${exemption.literal}\x00app.t3.codes`)],
+        [exemption],
+        [],
+      ).map((item) => item.rule),
+    ).toEqual(["t3-domain"]);
+    expect(
+      scanCollection(
+        [js("removed", "apps/server/dist/server.mjs"), cache(exemption.literal)],
+        [exemption],
+        [],
+      ).some((item) => item.rule === "t3-domain"),
     ).toBe(true);
   });
   it("counts chunk families together and fails when an entire exempted chunk disappears", () => {

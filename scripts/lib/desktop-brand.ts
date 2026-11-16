@@ -3,6 +3,22 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
 
+// Electron's own Info.plist asks for these with "This app needs access to …", which macOS shows
+// verbatim. Name the app and say why, like the descriptions the build config already sets.
+const electronDefaultUsageDescriptions = (name: string) => ({
+  NSAudioCaptureUsageDescription: `${name} lets commands run by terminals and coding agents capture system audio.`,
+  NSBluetoothAlwaysUsageDescription: `${name} lets commands run by terminals and coding agents use Bluetooth.`,
+  NSBluetoothPeripheralUsageDescription: `${name} lets commands run by terminals and coding agents use Bluetooth.`,
+});
+
+// Windows installer script and Linux AppStream metadata carry upstream identity and are unused
+// on macOS; electron-builder reads them from apps/desktop/resources, not from the staged copy.
+export const STANDALONE_MAC_FILE_EXCLUSIONS = [
+  "!apps/desktop/prod-resources/installer.nsh",
+  "!apps/desktop/prod-resources/linux",
+  "!apps/desktop/prod-resources/linux/**/*",
+] as const;
+
 export function applyDesktopBrandBuildConfig(
   config: Record<string, unknown>,
   brand: BrandProfile,
@@ -19,16 +35,20 @@ export function applyDesktopBrandBuildConfig(
   if (config.mac) {
     const mac = config.mac as Record<string, unknown>;
     const { provisioningProfile: _profile, ...macWithoutProfile } = mac;
+    result.files = [...((config.files ?? []) as string[]), ...STANDALONE_MAC_FILE_EXCLUSIONS];
     result.mac = {
       ...macWithoutProfile,
       entitlements: "entitlements.mac.plist",
       entitlementsInherit: "entitlements.mac.plist",
-      extendInfo: Object.fromEntries(
-        Object.entries((mac.extendInfo ?? {}) as Record<string, unknown>).map(([key, value]) => [
-          key,
-          typeof value === "string" ? value.replaceAll("T3 Code", brand.name) : value,
-        ]),
-      ),
+      extendInfo: {
+        ...electronDefaultUsageDescriptions(brand.name),
+        ...Object.fromEntries(
+          Object.entries((mac.extendInfo ?? {}) as Record<string, unknown>).map(([key, value]) => [
+            key,
+            typeof value === "string" ? value.replaceAll("T3 Code", brand.name) : value,
+          ]),
+        ),
+      },
       protocols: [
         { name: brand.name, schemes: [brand.schemes.production, brand.schemes.development] },
         { name: "Web site URL", schemes: ["http", "https"], role: "Viewer" },
@@ -41,6 +61,8 @@ export function applyDesktopBrandBuildConfig(
 export function desktopBrandStageMetadata(brand: BrandProfile) {
   return {
     name: brand.slug,
+    // Upstream stages no top-level productName; the release checker reads it from app.asar.
+    ...(brand.id === "upstream" ? {} : { productName: brand.desktop.productName }),
     description: brand.desktop.description,
     homepage: brand.desktop.homepage,
     author: brand.desktop.author,

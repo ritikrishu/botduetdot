@@ -39,4 +39,7 @@ export const applyStandaloneWebAssets = Effect.fn("applyStandaloneWebAssets")(fu
     );
   }
   yield* fs.writeFileString(manifestPath, `${yield* encodeManifest(manifest)}\n`);
+  // Upstream's Android asset links and Apple app-site association bind T3's apps to T3's domain.
+  // The standalone build has no hosted domain to associate, so it ships neither file.
+  yield* fs.remove(path.join(target, ".well-known"), { recursive: true, force: true });
 });

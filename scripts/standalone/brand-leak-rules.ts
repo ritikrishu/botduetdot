@@ -45,7 +45,9 @@ export const FORBIDDEN_PATTERNS = [
   ["expo-update", /u\.expo\.dev/gi],
   ["expo-project", /d763fcb8-d37c-41ea-a773-b54a0ab4a454/gi],
   ["posthog-key", /phc_/g],
-  ["clerk-key", /pk_(?:live|test)_/g],
+  // A publishable key is the prefix plus base64 of its frontend API host. Bare prefixes are the
+  // dormant key parsers in @clerk/shared and relayAuth, which T3 Connect being off never reaches.
+  ["clerk-key", /pk_(?:live|test)_[A-Za-z0-9+/]{10,}/g],
   ["upstream-profile", /t3code-v2|T3 Code \(Alpha\)|["'`]t3code-dev["'`]/g],
   [
     "upstream-scheme",
@@ -60,7 +62,16 @@ export interface CountedExemption {
   readonly count: number;
   readonly reason: string;
   readonly source: string;
+  /** Exemptions apply only to JavaScript unless they opt in to one non-JavaScript text file. */
+  readonly text?: true;
 }
+
+/**
+ * V8 bytecode caches built by scripts/prepare-server-compile-cache.cjs from the packaged server
+ * JavaScript. Their strings come from files the scan already counts, so they may hold permitted
+ * literals at any count; every other pattern still fails. File names are content hashes.
+ */
+export const DERIVED_CACHE_SCOPE = /(?:^|\/)server-compile-cache\/[^/]+$/;
 
 const server = (name: string) => new RegExp(`(?:^|/)apps/server/dist/${name}-[^/]+\\.mjs$`);
 const main = /(?:^|\/)apps\/desktop\/dist-electron\/main\.cjs$/;
@@ -107,6 +118,35 @@ export const COUNTED_EXEMPTIONS: readonly CountedExemption[] = [
     count: 1,
     reason: "Windows ADMX label; Windows is out of scope",
     source: "apps/server/src/policy/policyTemplates.ts:100",
+  },
+  {
+    scope: server("binCli"),
+    literal: "installs `document` for `com.t3tools.t3code`",
+    count: 1,
+    reason: "Inert doc comment; the standalone profile uses the brand app ID",
+    source: "apps/server/src/policy/policyTemplates.ts:341",
+  },
+  {
+    scope: server("relayTracing"),
+    literal: "app.t3.codes serves stable",
+    count: 1,
+    reason: "Inert doc comment on a T3 Connect setting that standalone disables",
+    source: "apps/server/src/cloud/publicConfig.ts:127",
+  },
+  {
+    scope: main,
+    literal: '"snap-shot@t3.codes"',
+    count: 1,
+    reason: "GNOME Shell extension UUID; Linux capture is out of scope",
+    source: "apps/desktop/gnome-extension/bundle.json:2",
+  },
+  {
+    scope: /(?:^|\/)apps\/server\/dist\/client\/third-party-licenses\.json$/,
+    literal: '"sourceUrl":"https://github.com/pingdotgg/t3code"',
+    count: 1,
+    reason: "MIT notice for T3 Code must credit its source (contract r5)",
+    source: "third-party-licenses.config.json:7",
+    text: true,
   },
   {
     scope: server("runtimeLayer"),

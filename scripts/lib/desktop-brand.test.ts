@@ -52,6 +52,12 @@ it("forces the standalone feed and identity while preserving macOS permissions a
     entitlements: "entitlements.mac.plist",
     entitlementsInherit: "entitlements.mac.plist",
     extendInfo: {
+      NSAudioCaptureUsageDescription:
+        "BotDuetDot lets commands run by terminals and coding agents capture system audio.",
+      NSBluetoothAlwaysUsageDescription:
+        "BotDuetDot lets commands run by terminals and coding agents use Bluetooth.",
+      NSBluetoothPeripheralUsageDescription:
+        "BotDuetDot lets commands run by terminals and coding agents use Bluetooth.",
       NSCameraUsageDescription: "BotDuetDot uses the camera.",
       CFBundleDocumentTypes: [{ CFBundleTypeRole: "Viewer" }],
     },
@@ -60,13 +66,23 @@ it("forces the standalone feed and identity while preserving macOS permissions a
       { name: "Web site URL", schemes: ["http", "https"], role: "Viewer" },
     ],
   });
+  assert.deepEqual(result.files, [
+    "!apps/desktop/prod-resources/installer.nsh",
+    "!apps/desktop/prod-resources/linux",
+    "!apps/desktop/prod-resources/linux/**/*",
+  ]);
   assert.equal(config.mac.provisioningProfile, "upstream.profile");
   assert.deepEqual(desktopBrandStageMetadata(STANDALONE_BRAND), {
     name: "botduetdot",
+    productName: "BotDuetDot",
     description: STANDALONE_BRAND.desktop.description,
     homepage: "https://ritikrishu.github.io/botduetdot/",
     author: "ritikrishu",
   });
+});
+
+it("keeps upstream stage metadata without a top-level productName", () => {
+  assert.notProperty(desktopBrandStageMetadata(UPSTREAM_BRAND), "productName");
 });
 
 it("ships exactly the unrestricted runtime and device entitlements", () => {

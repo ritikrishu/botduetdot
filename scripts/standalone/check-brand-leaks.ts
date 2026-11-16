@@ -16,6 +16,7 @@ import {
   ANDROID_PERMISSIONS,
   BARE_NAME_COUNTS,
   COUNTED_EXEMPTIONS,
+  DERIVED_CACHE_SCOPE,
   FORBIDDEN_ENTITLEMENTS,
   FORBIDDEN_PATTERNS,
   RELEASE_IDENTITY,
@@ -104,22 +105,22 @@ export function scanText(
 ): Finding[] {
   const findings: Finding[] = [];
   let text = file.text;
-  if (file.javascript) {
-    for (const exemption of exemptions.filter((item) => item.scope.test(file.scope))) {
-      const count = text.split(exemption.literal).length - 1;
-      if (count !== exemption.count)
-        findings.push(
-          finding(
-            file.artifact,
-            `exemption-count: expected ${exemption.count}, found ${count}; ${exemption.source}`,
-            text,
-            Math.max(0, text.indexOf(exemption.literal)),
-          ),
-        );
-      // A changed exemption never masks the newly introduced occurrences.
-      if (count === exemption.count)
-        text = text.replaceAll(exemption.literal, " ".repeat(exemption.literal.length));
-    }
+  for (const exemption of exemptions.filter(
+    (item) => item.scope.test(file.scope) && (file.javascript || item.text === true),
+  )) {
+    const count = text.split(exemption.literal).length - 1;
+    if (count !== exemption.count)
+      findings.push(
+        finding(
+          file.artifact,
+          `exemption-count: expected ${exemption.count}, found ${count}; ${exemption.source}`,
+          text,
+          Math.max(0, text.indexOf(exemption.literal)),
+        ),
+      );
+    // A changed exemption never masks the newly introduced occurrences.
+    if (count === exemption.count)
+      text = text.replaceAll(exemption.literal, " ".repeat(exemption.literal.length));
   }
   const normalized = file.javascript
     ? decodeEscapes(text)
@@ -204,7 +205,9 @@ export function scanCollection(
   const findings: Finding[] = [];
   const permitted: CountedExemption[] = [];
   for (const exemption of exemptions) {
-    const matching = files.filter((file) => file.javascript && exemption.scope.test(file.scope));
+    const matching = files.filter(
+      (file) => (file.javascript || exemption.text === true) && exemption.scope.test(file.scope),
+    );
     const count = matching.reduce(
       (sum, file) => sum + file.text.split(exemption.literal).length - 1,
       0,
@@ -235,9 +238,14 @@ export function scanCollection(
       );
   }
   for (const file of files) {
+    const derived = DERIVED_CACHE_SCOPE.test(file.scope);
     const local = permitted
-      .filter((item) => item.scope.test(file.scope))
-      .map((item) => ({ ...item, count: file.text.split(item.literal).length - 1 }));
+      .filter((item) => derived || item.scope.test(file.scope))
+      .map((item) => ({
+        ...item,
+        ...(derived ? { scope: DERIVED_CACHE_SCOPE, text: true as const } : {}),
+        count: file.text.split(item.literal).length - 1,
+      }));
     findings.push(...scanText(file, local, !bareCounts.some(([scope]) => scope.test(file.scope))));
   }
   return findings;

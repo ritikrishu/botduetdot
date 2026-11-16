@@ -20,7 +20,10 @@ it.effect("replaces standalone assets and preserves unrelated manifest fields", 
     };
     yield* fs.writeFileString(path.join(dir, "manifest.webmanifest"), JSON.stringify(manifest));
     yield* fs.writeFileString(path.join(dir, "favicon.ico"), "old channel icon");
+    yield* fs.makeDirectory(path.join(dir, ".well-known"));
+    yield* fs.writeFileString(path.join(dir, ".well-known/assetlinks.json"), "[]");
     yield* applyStandaloneWebAssets(STANDALONE_BRAND, dir);
+    assert.isFalse(yield* fs.exists(path.join(dir, ".well-known")));
     assert.deepEqual(JSON.parse(yield* fs.readFileString(path.join(dir, "manifest.webmanifest"))), {
       ...manifest,
       name: STANDALONE_BRAND.name,
@@ -46,8 +49,9 @@ it.effect("leaves upstream files byte-identical even without a manifest", () =>
     const path = yield* Path.Path;
     const dir = yield* fs.makeTempDirectoryScoped();
     yield* fs.writeFileString(path.join(dir, "favicon.ico"), "upstream channel");
+    yield* fs.makeDirectory(path.join(dir, ".well-known"));
     yield* applyStandaloneWebAssets(UPSTREAM_BRAND, dir);
-    assert.deepEqual(yield* fs.readDirectory(dir), ["favicon.ico"]);
+    assert.deepEqual((yield* fs.readDirectory(dir)).toSorted(), [".well-known", "favicon.ico"]);
     assert.equal(yield* fs.readFileString(path.join(dir, "favicon.ico")), "upstream channel");
   }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
 );
