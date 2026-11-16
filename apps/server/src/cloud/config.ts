@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import {
   RelayManagedEndpointOrigin,
   RelayManagedEndpointRuntimeConfig,
@@ -52,6 +53,7 @@ export const readAgentActivityPublishingActive: (
   secrets: ServerSecretStore.ServerSecretStore["Service"],
 ) => Effect.Effect<boolean> = Effect.fn("config.readAgentActivityPublishingActive")(
   function* (secrets: ServerSecretStore.ServerSecretStore["Service"]) {
+    if (!BRAND.features.t3Connect) return false;
     const readSecretString = (name: string) =>
       secrets
         .get(name)
@@ -86,14 +88,16 @@ const readSecretString = (name: string) =>
     Effect.orElseSucceed(() => null),
   );
 
-export const readRelayConnection = Effect.all([
-  readSecretString(RELAY_URL_SECRET),
-  readSecretString(RELAY_ENVIRONMENT_CREDENTIAL_SECRET),
-]).pipe(
-  Effect.map(([url, environmentCredential]) =>
-    url && environmentCredential ? { url, environmentCredential } : null,
-  ),
-);
+export const readRelayConnection = !BRAND.features.t3Connect
+  ? Effect.succeed(null)
+  : Effect.all([
+      readSecretString(RELAY_URL_SECRET),
+      readSecretString(RELAY_ENVIRONMENT_CREDENTIAL_SECRET),
+    ]).pipe(
+      Effect.map(([url, environmentCredential]) =>
+        url && environmentCredential ? { url, environmentCredential } : null,
+      ),
+    );
 
 export const readHoldWebhooksWhileOffline = readSecretString(
   HOLD_WEBHOOKS_WHILE_OFFLINE_SECRET,

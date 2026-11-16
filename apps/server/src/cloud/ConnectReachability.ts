@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import * as NodeNet from "node:net";
 
 import {
@@ -272,9 +273,11 @@ const make = Effect.gen(function* () {
   );
 
   const gatherFacts = Effect.gen(function* () {
-    const managedTunnelConfigured = Option.isSome(
-      yield* secrets.get(CLOUD_ENDPOINT_RUNTIME_CONFIG).pipe(Effect.orElseSucceed(Option.none)),
-    );
+    const managedTunnelConfigured =
+      BRAND.features.t3Connect &&
+      Option.isSome(
+        yield* secrets.get(CLOUD_ENDPOINT_RUNTIME_CONFIG).pipe(Effect.orElseSucceed(Option.none)),
+      );
     const connector = managedTunnelConfigured ? yield* runtime.inspectConnector : null;
     const endpoint =
       connector?.hostname && connector.readyConnections !== 0

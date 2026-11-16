@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import {
   AuthStandardClientScopes,
   EnvironmentAuthenticatedPrincipal,
@@ -166,6 +167,15 @@ export class CloudLinkOriginInvalidError extends Schema.TaggedError<CloudLinkOri
   }
 }
 
+export class CloudLinkDisabledError extends Schema.TaggedError<CloudLinkDisabledError>()(
+  "CloudLinkDisabledError",
+  {},
+) {
+  override get message(): string {
+    return `T3 Connect is not available in ${BRAND.name}.`;
+  }
+}
+
 export class CloudLinkNotLinkedError extends Schema.TaggedError<CloudLinkNotLinkedError>()(
   "CloudLinkNotLinkedError",
   {},
@@ -284,6 +294,7 @@ const isPermanentLinkError = Schema.is(
     CloudLinkRelayConfigInvalidError,
     CloudLinkOriginInvalidError,
     CloudLinkNotLinkedError,
+    CloudLinkDisabledError,
     CloudLinkAccountMismatchError,
     CloudLinkAuthorizationMissingError,
     CloudLinkProofRejectedError,
@@ -382,6 +393,7 @@ type ManagedTunnelRecoveryProofInput = {
 );
 
 export type CloudLinkError =
+  | CloudLinkDisabledError
   | CloudLinkAccountMismatchError
   | CloudLinkAuthorizationMissingError
   | CloudLinkEndpointUnavailableError
@@ -426,6 +438,7 @@ export class CloudLink extends Context.Service<
       | CloudLinkOriginInvalidError
       | CloudLinkInternalError
       | EnvironmentAuth.ServerAuthInternalError
+      | CloudLinkDisabledError
       | ManagedLimits.ManagedPolicyRefusedError,
       EnvironmentAuthenticatedPrincipal
     >;
@@ -440,6 +453,7 @@ export class CloudLink extends Context.Service<
       | CloudLinkRelayConfigInvalidError
       | CloudLinkTunnelSupersededError
       | EnvironmentAuth.ServerAuthInternalError
+      | CloudLinkDisabledError
       | ManagedLimits.ManagedPolicyRefusedError
       | RelayRequestError
     >;
@@ -452,7 +466,10 @@ export class CloudLink extends Context.Service<
       input: EnvironmentCloudPreferencesRequest,
     ) => Effect.Effect<
       EnvironmentCloudLinkStateResult,
-      CloudLinkNotLinkedError | CloudLinkInternalError | ManagedLimits.ManagedPolicyRefusedError
+      | CloudLinkNotLinkedError
+      | CloudLinkInternalError
+      | CloudLinkDisabledError
+      | ManagedLimits.ManagedPolicyRefusedError
     >;
     readonly answerHealthRequest: (
       request: RelayCloudEnvironmentHealthRequest,
@@ -462,6 +479,7 @@ export class CloudLink extends Context.Service<
       | CloudLinkProofReplayedError
       | CloudLinkInternalError
       | EnvironmentAuth.ServerAuthInternalError
+      | CloudLinkDisabledError
       | ManagedLimits.ManagedPolicyRefusedError
     >;
     readonly mintCredential: (
@@ -472,6 +490,7 @@ export class CloudLink extends Context.Service<
       | CloudLinkProofReplayedError
       | CloudLinkInternalError
       | EnvironmentAuth.ServerAuthInternalError
+      | CloudLinkDisabledError
       | ManagedLimits.ManagedPolicyRefusedError
     >;
     readonly reconcileDesiredLinkIfStillDesired: (
@@ -513,6 +532,48 @@ export class CloudLink extends Context.Service<
 >()("t3/cloud/CloudLink") {}
 
 const make = Effect.gen(function* () {
+  if (!BRAND.features.t3Connect) {
+    // A shared home keeps the official app's link; policy unlinking would erase it.
+    const refused = Effect.fn("CloudLink.refusedByBrand")(() =>
+      Effect.fail(new CloudLinkDisabledError({})),
+    );
+    const notStarted = Effect.fn("CloudLink.notStartedByBrand")(() => Effect.succeed(false));
+    return CloudLink.of({
+      linkProof: refused,
+      applyRelayConfig: refused,
+      updatePreferences: refused,
+      answerHealthRequest: refused,
+      mintCredential: refused,
+      linkState: Effect.fn("CloudLink.linkStateByBrand")(() =>
+        Effect.succeed({
+          linked: false,
+          linkRevoked: false,
+          cloudUserId: null,
+          relayUrl: null,
+          relayIssuer: null,
+          managedTunnelActive: false,
+          publishAgentActivity: false,
+          holdWebhooksWhileOffline: false,
+        }),
+      ),
+      unlink: Effect.fn("CloudLink.unlinkByBrand")(() =>
+        Effect.succeed({
+          ok: true as const,
+          endpointRuntimeStatus: { status: "disabled" as const },
+        }),
+      ),
+      reconcileDesiredLinkIfStillDesired: Effect.fn("CloudLink.notDesiredByBrand")(() =>
+        Effect.succeed(null),
+      ),
+      registerManagedTunnelRecovery: Effect.fn("CloudLink.notLinkedByBrand")(() =>
+        Effect.succeed({ status: "not_linked" as const }),
+      ),
+      recoverManagedTunnel: notStarted,
+      startManagedTunnelIfOriginConfirmed: notStarted,
+      releaseManagedTunnelOnShutdown: notStarted,
+    });
+  }
+
   const secrets = yield* ServerSecretStore.ServerSecretStore;
   const environment = yield* ServerEnvironment.ServerEnvironment;
   const endpointRuntime = yield* ManagedEndpointRuntime.CloudManagedEndpointRuntime;

@@ -75,7 +75,7 @@ export const installCli = Effect.fn("cli.install.install")(function* () {
   const binDir = path.resolve(
     environment.T3CODE_INSTALL_BIN_DIR?.trim() || path.join(home, ".local", "bin"),
   );
-  const name = windows ? "t3.cmd" : "t3";
+  const name = windows ? `${BRAND.cliName}.cmd` : BRAND.cliName;
   const link = path.join(binDir, name);
   const failed = (reason: string) => (cause: unknown) => new CliInstallError({ reason, cause });
 
@@ -167,7 +167,9 @@ export const installCli = Effect.fn("cli.install.install")(function* () {
     for (const entry of entries) {
       if (same(entry)) return undefined;
       if (!path.isAbsolute(entry) || detectCliRunner(`${entry}/`) !== null) continue;
-      for (const name of windows ? ["t3.cmd", "t3.exe"] : ["t3"]) {
+      for (const name of windows
+        ? [`${BRAND.cliName}.cmd`, `${BRAND.cliName}.exe`]
+        : [BRAND.cliName]) {
         const candidate = path.join(entry, name);
         if (yield* fs.exists(candidate).pipe(Effect.orElseSucceed(() => false))) return candidate;
       }
@@ -331,13 +333,13 @@ export const offerCliInstall = Effect.fn("cli.install.offer")(function* <E, R, E
   // Any t3 already installed means no prompt: ours (even when off PATH) or another on PATH.
   // Runners put their own cache's node_modules/.bin on PATH, so skip those.
   const windows = platform === "win32";
-  const names = windows ? ["t3.cmd", "t3.exe"] : ["t3"];
+  const names = windows ? [`${BRAND.cliName}.cmd`, `${BRAND.cliName}.exe`] : [BRAND.cliName];
   const launchers = yield* fs
     .readFileString(path.join(runtimeDir, "launchers"))
     .pipe(Effect.orElseSucceed(() => ""));
   const candidates = [
     ...launchers.split(/\r?\n/).filter(Boolean),
-    path.join(path.dirname(runtimeDir), "bin", windows ? "t3.cmd" : "t3"),
+    path.join(path.dirname(runtimeDir), "bin", windows ? `${BRAND.cliName}.cmd` : BRAND.cliName),
     ...(environment.PATH ?? environment.Path ?? "")
       .split(windows ? ";" : ":")
       .filter(

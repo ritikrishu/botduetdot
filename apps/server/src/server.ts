@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import * as ProviderEventLoggers from "@t3tools/provider-core/server/ProviderEventLoggers";
 import type { RelayManagedEndpointRuntimeConfig } from "@t3tools/contracts/relay";
 import * as Random from "effect/Random";
@@ -546,6 +547,7 @@ const layerScheduledTaskWebhookOrigin = Layer.effect(
   Effect.gen(function* () {
     const secrets = yield* ServerSecretStore.ServerSecretStore;
     return Effect.gen(function* () {
+      if (!BRAND.features.t3Connect) return { relayHookBaseUrl: null };
       const [relayUrl, tunnelConfig] = yield* Effect.all([
         secrets.get(RELAY_URL_SECRET),
         secrets.get(CLOUD_ENDPOINT_RUNTIME_CONFIG),
@@ -789,7 +791,17 @@ const layerMakeRoutes = Layer.mergeAll(
       Layer.provide(ProjectHttp.layer),
       Layer.provide(speechHttpApiLayer),
       Layer.provide(ServerHttp.layerServerEnvironmentHttpApi),
-      Layer.provide(WebhookRoute.layer.pipe(Layer.provide(RelayDeliveryProof.layer))),
+      Layer.provide(
+        WebhookRoute.layer.pipe(
+          Layer.provide(
+            BRAND.features.t3Connect
+              ? RelayDeliveryProof.layer
+              : Layer.succeed(RelayDeliveryProof.RelayDeliveryProof, {
+                  verify: Effect.fn("RelayDeliveryProof.disabledByBrand")(() => Effect.succeedNone),
+                }),
+          ),
+        ),
+      ),
       Layer.provide(AuthHttp.layerAuthenticatedAuth),
     ),
     ServerHttp.layerOtlpTracesProxyRoute,
