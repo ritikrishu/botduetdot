@@ -5,7 +5,29 @@
 Sidebar Spaces are Arc-style named sets of projects, with icons and attention indicators.
 Web and desktop provide a switcher strip, editing, command-palette actions and optional shortcuts; mobile provides a view-and-switch bar.
 Definitions live in `ServerSettings.sidebarSpaces` in each environment's `userdata/settings.json`; the active selection is per device.
-With no spaces, the sidebar keeps upstream behavior. The fork changes no server code and adds no database migrations.
+With no spaces, the sidebar keeps upstream behavior. Spaces add no database migrations. Standalone also changes server defaults and integrations.
+
+## BotDuetDot standalone
+
+BotDuetDot is a self-hosted command center for coding agents, including Claude Code and Codex,
+using your own subscriptions. Arc-style Spaces separate always-on bot threads from dev work.
+The macOS app runs the server on your Mac; Android is a remote control paired over LAN or Tailscale.
+There is no BotDuetDot account, T3 Connect or push notification service. Analytics is off by default;
+see [data safety](docs/standalone/data-safety.md) for operator-enabled analytics and other transfers.
+
+Build with `T3CODE_BRAND=standalone`; Android also needs `EXPO_PUBLIC_T3CODE_BRAND=standalone`.
+The profile is baked into release bundles. Omitting the selector builds the upstream identity.
+Use the [release runbook](docs/standalone/release.md) for signed macOS and Play releases.
+
+Standalone defaults to `~/.botduetdot`, Electron profile
+`~/Library/Application Support/botduetdot`, app/package ID `com.ritikrishu.botduetdot`,
+`botduetdot://` links and its own GitHub update feed. It coexists with the official app without
+sharing its database or profile. **Never export `T3CODE_HOME` globally**: both apps honor it,
+so pointing them at one home defeats isolation. Never run two servers against one home.
+Use a disposable copied home for migration tests; never point standalone at live `~/.t3`.
+
+The preview/iPhone instructions below describe the earlier Sidebar Spaces fork, not standalone
+releases. Shared-home warnings apply only if you deliberately reuse an official home.
 
 ## Design decisions and known limits
 
@@ -64,24 +86,110 @@ Base release: `v0.1.9`. These are all pre-existing files changed by the fork sin
 | `apps/mobile/app.config.test.ts`                               | Cover variants, Personal Team signing, bundle identity, entitlements and OTA opt-in.                      |
 | `apps/mobile/README.md`                                        | Document Personal Team signing and a preview Release install beside the store app.                        |
 
-New code is isolated under `packages/contracts/src/sidebarSpaces*`,
+Spaces code is isolated under `packages/contracts/src/sidebarSpaces*`,
 `packages/client-runtime/src/state/sidebarSpaces*`, `apps/web/src/sidebarSpaces/`,
 and `apps/mobile/src/features/home/spaces/`, with tests beside it and
 `packages/shared/src/serverSettings.sidebarSpaces.test.ts`.
 
+### Standalone seams
+
+Derived from `git diff --stat v0.1.9..HEAD`, excluding new files; unabridged names come from
+`git diff --name-only --diff-filter=MDRT v0.1.9..HEAD`. Cross-checked against contract S1–S57,
+including current uncommitted integration edits to upstream files. The Spaces table above remains
+part of this inventory. Refresh both tables after integration and each upgrade.
+
+| Upstream file                                                               | Fork edit to preserve                                                                                                                                     |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/desktop/src/app/DesktopAppIdentity.ts`                                | S36: About `credits`                                                                                                                                      |
+| `apps/desktop/src/app/DesktopCliCommand.ts`                                 | S23: `const CLI_NAME = BRAND.cliName`                                                                                                                     |
+| `apps/desktop/src/app/DesktopCliShim.ts`                                    | S22: `BRAND.cliName`                                                                                                                                      |
+| `apps/desktop/src/app/DesktopEnvironment.ts`                                | S15: `BRAND.name`, AUMID                                                                                                                                  |
+| `apps/desktop/src/app/DesktopLegacyLocalStorage.ts`                         | S16: `BRAND.desktop.legacyLocalStorageProfileNames`                                                                                                       |
+| `apps/desktop/src/app/DesktopStartupRecovery.ts`                            | S35: brand releases                                                                                                                                       |
+| `apps/desktop/src/app/DesktopStatePaths.ts`                                 | S12: `BRAND.homeDirName`                                                                                                                                  |
+| `apps/desktop/src/app/DesktopUserData.ts`                                   | S13: brand dir names                                                                                                                                      |
+| `apps/desktop/src/electron/ElectronProtocol.ts`                             | S14: `BRAND.schemes`                                                                                                                                      |
+| `apps/desktop/vite.config.ts`                                               | S3: spread into `publicConfigDefine`                                                                                                                      |
+| `apps/mobile/app.config.ts`                                                 | S18: import + `export default applyMobileBrand(config, …)` (2 lines)                                                                                      |
+| `apps/mobile/src/App.tsx`                                                   | S56: prefixes from `brandAppSchemes(BRAND)`                                                                                                               |
+| `apps/mobile/src/components/BrandMark.tsx`                                  | S33: Use standalone mobile name and assets.                                                                                                               |
+| `apps/mobile/src/components/CompactBrandTitle.tsx`                          | Render the standalone mobile header title.                                                                                                                |
+| `apps/mobile/src/components/brandAssets.ts`                                 | S33: Use standalone mobile name and assets.                                                                                                               |
+| `apps/mobile/src/features/connection/pairing.ts`                            | S32: `isBrandAppProtocol` (brand only)                                                                                                                    |
+| `apps/mobile/src/features/layout/workspace/PullRequestToolbar.android.tsx`  | S33: Use standalone mobile name and assets.                                                                                                               |
+| `apps/mobile/src/features/layout/workspace/WorkspaceListHeader.android.tsx` | S33: Use standalone mobile name and assets.                                                                                                               |
+| `apps/mobile/src/features/settings/lib/legal-document-url.ts`               | S31: `BRAND.links.marketingSite`                                                                                                                          |
+| `apps/server/src/auth/McpOAuth.ts`                                          | S49: `resource_name: BRAND.name`                                                                                                                          |
+| `apps/server/src/cli/browser.ts`                                            | S40: `BRAND.homeDirName`                                                                                                                                  |
+| `apps/server/src/cli/install.ts`                                            | S54: installer hints from `BRAND.links.installSh/installPs1`; null → desktop-Settings hint                                                                |
+| `apps/server/src/cli/invocation.ts`                                         | S24: `BRAND.cliName`                                                                                                                                      |
+| `apps/server/src/cli/triage.ts`                                             | S53: handler fails with a clear message when `!BRAND.features.triage`                                                                                     |
+| `apps/server/src/cloud/bootService.ts`                                      | S8: `BRAND.service`                                                                                                                                       |
+| `apps/server/src/cloud/npmRelease.ts`                                       | S45: package from `BRAND.npmPackage`; null → `ServerNpmReleaseError("Release lookups are not available in BotDuetDot.")` before any network or `npm` call |
+| `apps/server/src/cloud/publicConfig.ts`                                     | S42: Ignore upstream cloud/Clerk/relay telemetry overrides; derive nightly URL from profile                                                               |
+| `apps/server/src/cloud/servicePreflight.ts`                                 | S54: installer hints from `BRAND.links.installSh/installPs1`; null → desktop-Settings hint                                                                |
+| `apps/server/src/device/SshDeviceHost.ts`                                   | S52: `BRAND.homeDirName` (JSON-quoted into the script)                                                                                                    |
+| `apps/server/src/device/sshDeviceScript.ts`                                 | S52: `BRAND.homeDirName` (JSON-quoted into the script)                                                                                                    |
+| `apps/server/src/environment/ServerEnvironment.ts`                          | S44: `triage`, `npmReleaseLookup`, `desktopAppChannelSwitch` only when the matching `BRAND.features` flag is true (omit the key otherwise)                |
+| `apps/server/src/httpCors.ts`                                               | S9: `desktopRendererOrigins(BRAND)` ∪ upstream origins                                                                                                    |
+| `apps/server/src/os-jank.ts`                                                | S6: `BRAND.homeDirName`                                                                                                                                   |
+| `apps/server/src/policy/policyTemplates.ts`                                 | S51: `PayloadType`/`PayloadIdentifier` from `BRAND.managedPolicy.macDomain`, display names from `BRAND.name`                                              |
+| `apps/server/src/project/ManagedProjectFolders.ts`                          | S55: brand name + site                                                                                                                                    |
+| `apps/server/src/provider/CodexChatGptAuth.ts`                              | S48: `agent_name_hint: BRAND.name`                                                                                                                        |
+| `apps/server/src/provider/ModelManifest.ts`                                 | S7: `BRAND.modelManifestUrl`                                                                                                                              |
+| `apps/server/src/telemetry/AnalyticsService.ts`                             | S5: key/host/enabled defaults from `BRAND.analytics`                                                                                                      |
+| `apps/server/src/triage/TriageService.ts`                                   | S25: Disable triage; brand repository and hosted host in bundled prompts.                                                                                 |
+| `apps/server/src/triage/triagePrompt.ts`                                    | S25: Disable triage; brand repository and hosted host in bundled prompts.                                                                                 |
+| `apps/server/vite.config.ts`                                                | S2: spread `brandBuildDefine()` (+import)                                                                                                                 |
+| `apps/web/src/branding.ts`                                                  | S27: brand name/links                                                                                                                                     |
+| `apps/web/src/components/GitHubStarPrompt.tsx`                              | S37: Use fork recovery, repository and installer links.                                                                                                   |
+| `apps/web/src/components/InstallT3Commands.tsx`                             | S37: Use fork recovery, repository and installer links.                                                                                                   |
+| `apps/web/src/components/ServerUpdateAction.tsx`                            | Brand update confirmations and CLI restart instructions.                                                                                                  |
+| `apps/web/src/components/chat/QueuedRunsControl.tsx`                        | Brand queued-message attribution.                                                                                                                         |
+| `apps/web/src/components/chat/TimelineAssistantRows.tsx`                    | Brand assistant message headings.                                                                                                                         |
+| `apps/web/src/components/chat/TimelineUserMessageRow.tsx`                   | Brand sent-by attribution without changing wire values.                                                                                                   |
+| `apps/web/src/components/chat/turnDetailAnnouncement.ts`                    | Brand screen-reader message author announcements.                                                                                                         |
+| `apps/web/src/components/desktopUpdate.logic.ts`                            | S30: `BRAND.repository`                                                                                                                                   |
+| `apps/web/src/components/onboarding/WelcomePage.tsx`                        | Brand welcome and default telemetry copy.                                                                                                                 |
+| `apps/web/src/components/settings/CliCommandSettingsRow.tsx`                | Use the standalone CLI command and path hints.                                                                                                            |
+| `apps/web/src/components/settings/MobileAppSettingsRow.tsx`                 | S29: brand store links                                                                                                                                    |
+| `apps/web/src/components/settings/MultipleAccountsNote.tsx`                 | S57: `brandRepositoryUrl("blob/main/docs/user/faq.md#…")`                                                                                                 |
+| `apps/web/src/components/settings/SettingsPanels.tsx`                       | S46: render the update-track row and `UpdateTrackSwitchDialog` only when `BRAND.features.updateTrackSwitch`                                               |
+| `apps/web/src/components/settings/pairingUrls.ts`                           | S26: `if (!BRAND.hostedApp.pairingLinks) return null`                                                                                                     |
+| `apps/web/src/components/settings/settingsSearch.ts`                        | Match standalone command and update settings availability.                                                                                                |
+| `apps/web/src/components/sidebar/updateEverything.logic.ts`                 | Use the standalone CLI name in manual update hints.                                                                                                       |
+| `apps/web/src/hostedPairing.ts`                                             | S43: ignore `VITE_HOSTED_APP_URL`/`_CHANNEL` in standalone                                                                                                |
+| `apps/web/src/legalLinks.ts`                                                | S28: `BRAND.links.privacyPolicy`                                                                                                                          |
+| `apps/web/src/lib/bootError.ts`                                             | S37: Use fork recovery, repository and installer links.                                                                                                   |
+| `apps/web/tsconfig.json`                                                    | Include shared brand build helpers in TypeScript resolution.                                                                                              |
+| `apps/web/vite.config.ts`                                                   | S4: spread into `define`                                                                                                                                  |
+| `packages/contracts/package.json`                                           | S1: add `"./brand"` and `"./brandProfiles"` exports (contracts has 3 explicit exports)                                                                    |
+| `packages/contracts/src/environmentHttp.ts`                                 | S50: `brandRepositoryUrl("blob/main/docs/user/t3-connect-troubleshooting.md#…")`                                                                          |
+| `packages/shared/src/cliRelease.ts`                                         | S10: `BRAND.repository`                                                                                                                                   |
+| `packages/shared/src/codexAuthHandoff.ts`                                   | S20: brand scheme                                                                                                                                         |
+| `packages/shared/src/connectAuth.ts`                                        | S11: `DEFAULT_HOSTED_APP_URL = BRAND.hostedApp.url`                                                                                                       |
+| `packages/shared/src/managedPolicyFile.ts`                                  | S38: `BRAND.managedPolicy`                                                                                                                                |
+| `packages/shared/src/promptLinks.ts`                                        | S47: parse with `brandAppSchemePattern(BRAND)`; `promptLinkDeepLink` default scheme `BRAND.schemes.production`                                            |
+| `packages/shared/src/providerAuthReturnUrl.ts`                              | S19: `isBrandAppProtocol` + `BRAND.hostedApp.url` origin                                                                                                  |
+| `packages/shared/src/remote.ts`                                             | S21: emit `BRAND.schemes.production`, parse brand schemes only                                                                                            |
+| `packages/source-control-github/src/server/githubStackRebase.ts`            | S41: `BRAND.git`                                                                                                                                          |
+| `packages/ssh/src/tunnel.ts`                                                | S39: `BRAND.homeDirName`                                                                                                                                  |
+| `scripts/build-desktop-artifact.ts`                                         | S17: Preserve branded packaging, update feed, assets, entitlements and stage metadata.                                                                    |
+| `third-party-licenses.config.json`                                          | S34: Include the unchanged MIT notice in desktop, web and mobile license screens.                                                                         |
+
 ## Stay in sync with upstream
 
-Track upstream **release tags, not `main`**: daily packaged use shares data with the official app,
-so the fork must follow its database version. Matching a release avoids deliberately taking
+Track upstream **release tags, not `main`**, to use a known database version. Matching a release avoids deliberately taking
 unreleased migrations; it does not make downgrades safe. Test each upgrade on a copied home first.
-`origin` is `github.com/ritikrishu/t3code`; `upstream` is `github.com/pingdotgg/t3code`.
+Releases belong to `github.com/ritikrishu/botduetdot`; upstream is `github.com/pingdotgg/t3code`.
+Check `git remote -v`: older checkouts may still name the fork `ritikrishu/t3code`.
 
 From a clean fork checkout, replace `vX.Y.Z` with the target release:
 
 ```bash
 git fetch upstream --tags
 git config rerere.enabled true
-git switch -c sync/vX.Y.Z feat/sidebar-spaces
+git switch -c sync/vX.Y.Z feat/standalone-app
 git merge vX.Y.Z
 ```
 
@@ -115,6 +223,23 @@ vp test run apps/web/src/components/CommandPalette.logic.test.ts apps/web/src/co
 # Mobile persistence, filtering and signing
 vp test run apps/mobile/src/features/home/spaces/activeSpaceKeyStore.test.ts apps/mobile/src/features/home/spaces/useActiveSpaceHomeScope.test.ts apps/mobile/src/features/home/homeThreadList.test.ts apps/mobile/src/features/home/home-list-options.test.tsx apps/mobile/app.config.test.ts
 ```
+
+After each standalone upgrade, check for new upstream domains, home/profile names, schemes and
+environment overrides. Keep internal `@t3tools/*`, `T3CODE_*`, `t3.json` and wire identifiers.
+
+```bash
+export PATH="$HOME/.local/share/vite-plus/bin:$PATH"
+export T3CODE_BRAND=standalone
+node scripts/standalone/check-brand-leaks.ts --source
+```
+
+After rebuilding, run `node scripts/standalone/check-brand-leaks.ts --bundles`. It scans
+`apps/server/dist`, `apps/web/dist` and `apps/desktop/dist-electron`; it takes no path argument.
+The `--source` scan is advisory and can exit successfully with findings: review its output.
+The [release wrappers](docs/standalone/release.md) also check the exact DMG/ZIP/AAB. Review counted
+exemptions rather than increasing them to silence failures. Verify isolated homes, coexistence,
+pairing/deep links, no upstream startup traffic, and updates between two fork versions.
+Copied hosted thread links use `.invalid` and do not work in an external browser.
 
 At the `v0.1.9` base, `check:changed`'s **unused patches** step currently fails on an unrelated
 upstream peer-dependency issue involving `unenv` in `infra/relay`. It is not caused by Sidebar
@@ -308,12 +433,10 @@ not with the phone's camera app, or paste the link into **Add environment**. Cre
 on desktop or web connected to that server. The spaces bar appears on both the folded cover
 screen and the unfolded inner screen's split view; mobile only views and switches spaces.
 
-## Daily desktop use: open follow-up
+## Daily desktop use and releases
 
-Packaged builds share the official app's identity, profile and data; they are not isolated like
-**T3 Code (Dev)**. They auto-update to upstream unless `T3CODE_DISABLE_AUTO_UPDATE=1` is set
-in the app's launch environment ([DesktopConfig.ts](apps/desktop/src/app/DesktopConfig.ts)).
-An update to the official build would remove the fork feature and drop the spaces on its next
-settings write. A verified daily packaging/install procedure, persistent updater configuration
-and an independent app identity/update channel remain follow-up work. Until then, use the
-isolated dev setup above to try the fork.
+Install the signed Apple-silicon build from
+[BotDuetDot Releases](https://github.com/ritikrishu/botduetdot/releases/latest).
+Use the [release runbook](docs/standalone/release.md) for signing, verification, updates and Play
+promotion, and the [store listing](docs/standalone/store-listing.md) and
+[data-safety answers](docs/standalone/data-safety.md) for Play Console.

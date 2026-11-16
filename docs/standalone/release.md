@@ -1,0 +1,127 @@
+# Release BotDuetDot
+
+Run from the repository root on an Apple-silicon Mac. Release repository:
+`ritikrishu/botduetdot`; Android package: `com.ritikrishu.botduetdot` (permanent after first upload).
+Do not use the older preview/debug-signed APK procedure in FORK.md for Play.
+
+## One-time setup
+
+1. Join the Apple Developer Program. Create a **Developer ID Application** certificate with its
+   private key in the login keychain, or export a password-protected `.p12` for `CSC_LINK` and
+   `CSC_KEY_PASSWORD`. Record the Team ID and back up the private key securely. Standalone does not
+   require upstream passkey provisioning profiles. See [macOS signing](https://www.electron.build/docs/features/code-signing/code-signing-mac/).
+2. Configure exactly one complete notarization credential set: `APPLE_API_KEY` (absolute `.p8` path),
+   `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`; or a stored notarytool profile via `APPLE_KEYCHAIN_PROFILE`;
+   or `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`. Back up the once-downloadable `.p8`
+   offline. Keep credentials out of the repository and command transcripts.
+   See [notarization variables](https://www.electron.build/docs/environment-variables/).
+3. Install the Android toolchain described in [FORK.md](../../FORK.md#install-on-android-galaxy-fold)
+   and bundletool. Create a dedicated upload key outside the checkout:
+
+   ```bash
+   keytool -genkeypair -v -storetype PKCS12 -keystore "$HOME/keys/botduetdot-upload.p12" \
+     -alias upload -keyalg RSA -keysize 2048 -validity 10000
+   ```
+
+   Create the private `keys` directory first. Back up the keystore, passwords, alias and certificate
+   SHA-256 offline. Put `STANDALONE_UPLOAD_STORE_FILE`, `STANDALONE_UPLOAD_STORE_PASSWORD`,
+   `STANDALONE_UPLOAD_KEY_ALIAS`, `STANDALONE_UPLOAD_KEY_PASSWORD`, and
+   `STANDALONE_UPLOAD_CERT_SHA256` in private `~/.gradle/gradle.properties`.
+   The [signing plugin](../../apps/mobile/plugins/withAndroidReleaseSigning.cjs) requires release
+   credentials. Enrol in Play App Signing: Google holds the app-signing key; this upload key signs
+   submissions. Never substitute the Android debug key.
+
+4. Keep the GitHub repository public for unauthenticated updates. Enable Issues and set the homepage
+   to https://ritikrishu.github.io/botduetdot/. Set the checkout's GitHub default to
+   `ritikrishu/botduetdot`; still pass `--repo ritikrishu/botduetdot` to release commands. Disable inherited
+   upstream release workflows before enabling automation. Local release wrappers need no Actions.
+5. Publish only [site/](site/) through GitHub Pages, not all of `/docs`. It contains plain HTML and
+   directory indexes for extensionless routes, ready for a Pages artifact or the root of `gh-pages`.
+   Select Actions deployment if the T7 Pages workflow is installed; otherwise arrange a `gh-pages`
+   deployment. **The owner/orchestrator enables and deploys Pages.** Verify the homepage and all four
+   linked legal routes publicly before Play submission.
+6. Approve the app name/artwork, [store listing](store-listing.md), [Data safety](data-safety.md) and
+   public policies. Supply the Play contact email, reviewer access and account type/creation date.
+   Decide the lifetime macOS runtime name before first release: changing **BotDuetDot Beta** later
+   can orphan the **BotDuetDot Beta Safe Storage** Keychain item.
+
+## Version policy
+
+Use `X.Y.Z-botduetdot.N`: `X.Y.Z` is the upstream release base, `N` increases for every fork release
+on that base (start at 1 for a new base). Tag `v<version>` and publish a full GitHub release, not a
+prerelease: the feed uses `latest`. Android versionName matches desktop; versionCode is an increasing
+`YYYYMMDDNN` integer across all tracks (maximum 2100000000). Never reuse a code for a rebuilt AAB.
+Promoting the same AAB between tracks keeps its code.
+
+Pass the release version to the wrappers; do not blanket-rewrite workspace package versions. Record
+base tag, source commit, versionCode and artifact hashes with release notes. Never downgrade a migrated
+home; test upgrades on a copy and retain a pre-upgrade backup.
+
+## Build and verify each release
+
+Start with a clean, reviewed release checkout after integration. Never copy `.env.example` into a
+standalone build environment; upstream service keys/URLs fail the brand guard. Never export
+`T3CODE_HOME` globally. Install dependencies using `vp i` when needed.
+
+```bash
+export PATH="$HOME/.local/share/vite-plus/bin:$PATH"
+export T3CODE_BRAND=standalone
+node scripts/standalone/check-brand-leaks.ts --source
+node scripts/standalone/release-desktop-mac.ts --version 0.1.9-botduetdot.1 --dry-run
+node scripts/standalone/release-desktop-mac.ts --version 0.1.9-botduetdot.1
+```
+
+These T7 scripts are being implemented. Desktop flags above are contract-defined; confirm the
+implementation before running. After rebuilding, run
+`node scripts/standalone/check-brand-leaks.ts --bundles` (no path argument). It scans
+`apps/server/dist`, `apps/web/dist` and `apps/desktop/dist-electron`. The `--source` scan is advisory:
+inspect its findings even when it exits successfully.
+
+The desktop wrapper must build arm64 DMG, update ZIP, both blockmaps and `latest-mac.yml`; verify the
+signed, stapled `.app` inside **both** containers, matching CDHashes, bundle identifier, Developer ID
+and Team ID; assess each app with Gatekeeper; scan exact artifacts and record hashes. App verification
+uses `codesign --verify --deep --strict`, `xcrun stapler validate` and `spctl -a -t exec`.
+The DMG container itself is not separately notarized in v1. Do not run app stapling checks against the
+DMG or alter an artifact after its update manifest/blockmap is generated.
+
+For Android, use `scripts/standalone/release-android.ts` with this release environment:
+
+```bash
+export T3CODE_BRAND=standalone EXPO_PUBLIC_T3CODE_BRAND=standalone APP_VARIANT=production
+export T3CODE_MOBILE_VERSION=0.1.9-botduetdot.1 T3CODE_ANDROID_VERSION_CODE=2026111601
+export T3CODE_MOBILE_UPDATES_ENABLED=0 EXPO_NO_GIT_STATUS=1 NODE_ENV=production
+```
+
+**TODO (T7 flags):** insert the engineer-confirmed `release-android.ts` invocation, including version,
+versionCode and dry-run flags if required. Do not bypass it with a raw Gradle build for publication.
+The wrapper must prebuild production Android, build all ABIs, scan the exact AAB, verify its signing
+certificate against `STANDALONE_UPLOAD_CERT_SHA256` (not Android Debug), then stage
+`release/android/BotDuetDot-<version>-<versionCode>.aab` plus `.sha256`.
+
+Before first publication and after relevant upstream changes, complete contract integration A–G:
+isolated explicit/default homes, official-app coexistence, brand-only deep links and pairing,
+no upstream startup network, update download/install between two fork versions, and Android install/pairing.
+The prerelease-shaped version's behavior in electron-updater remains a release gate: test with
+`--mock-updates` and `vp run start:mock-update-server` before promising updates. Bundled upstream-profile
+elimination is also unverified until scans pass. Windows, Linux, Intel Mac and standalone iOS are outside v1.
+
+## Publish and promote
+
+After verification, rerun the desktop wrapper with the same version and `--publish` using T7's
+confirmed workflow. It must verify hashes and upload the five checked files to
+`ritikrishu/botduetdot` as a full release. Do not silently replace published artifacts; issue a new
+version for a correction. Check the release download and update feed after publication.
+
+Upload only the staged, verified AAB in Play Console:
+
+1. **Internal:** test installation, paired-server access, permissions, voice/attachments and upgrades.
+   Inspect Console's merged-manifest, target API and 16 KB page-alignment warnings. Current target/compile
+   settings come from [mobile config](../../apps/mobile/app.config.ts); Console's current requirement wins.
+2. **Closed:** complete listing, policies, Data safety, ads, audience, content rating, AI-content and
+   App access declarations. For personal accounts created after **2023-11-13**, maintain at least
+   **12 opted-in testers for 14 consecutive days**, then apply for production access with test evidence.
+   Organization accounts are outside that specific new-personal-account rule.
+   See [Google's testing requirements](https://support.google.com/googleplay/android-developer/answer/14151465?hl=en).
+3. **Production:** after access approval and review, promote the tested AAB and choose rollout scope.
+   Keep reviewer access operational. Review feedback before expanding rollout; fix failures with a higher
+   versionCode. Do not assume reaching day 14 automatically grants production access.
