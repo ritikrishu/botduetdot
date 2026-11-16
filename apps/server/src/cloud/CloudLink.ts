@@ -556,6 +556,8 @@ const make = Effect.gen(function* () {
           holdWebhooksWhileOffline: false,
         }),
       ),
+      // Succeeds without clearing anything on purpose: the persisted link belongs to the official
+      // app when the home is shared, and standalone is never linked (contract r7).
       unlink: Effect.fn("CloudLink.unlinkByBrand")(() =>
         Effect.succeed({
           ok: true as const,
