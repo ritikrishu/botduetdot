@@ -330,13 +330,44 @@ export const BARE_NAME_COUNTS = [
   ),
 ] as readonly (readonly [RegExp, number])[];
 
+// The merged manifest of a real 0.1.9-botduetdot.1 AAB, reviewed 2026-11-16. Runtime prompts:
+// CAMERA (QR pairing), RECORD_AUDIO (voice input), POST_NOTIFICATIONS. The rest are install-time
+// permissions from Expo and React Native libraries: network state, biometric unlock, scheduled and
+// promoted notifications, launcher badges (ShortcutBadger) and androidx's receiver guard. FCM push
+// and the Play install referrer are blocked in apps/mobile/brand.config.ts. Any new library
+// permission fails this gate until reviewed.
 export const ANDROID_PERMISSIONS = [
+  "android.permission.ACCESS_NETWORK_STATE",
+  "android.permission.ACCESS_WIFI_STATE",
   "android.permission.CAMERA",
+  "android.permission.FOREGROUND_SERVICE",
   "android.permission.INTERNET",
   "android.permission.MODIFY_AUDIO_SETTINGS",
   "android.permission.POST_NOTIFICATIONS",
+  "android.permission.POST_PROMOTED_NOTIFICATIONS",
+  "android.permission.READ_APP_BADGE",
+  "android.permission.RECEIVE_BOOT_COMPLETED",
   "android.permission.RECORD_AUDIO",
+  "android.permission.USE_BIOMETRIC",
+  "android.permission.USE_FINGERPRINT",
   "android.permission.VIBRATE",
+  "android.permission.WAKE_LOCK",
+  "com.anddoes.launcher.permission.UPDATE_COUNT",
+  "com.htc.launcher.permission.READ_SETTINGS",
+  "com.htc.launcher.permission.UPDATE_SHORTCUT",
+  "com.huawei.android.launcher.permission.CHANGE_BADGE",
+  "com.huawei.android.launcher.permission.READ_SETTINGS",
+  "com.huawei.android.launcher.permission.WRITE_SETTINGS",
+  "com.majeur.launcher.permission.UPDATE_BADGE",
+  "com.oppo.launcher.permission.READ_SETTINGS",
+  "com.oppo.launcher.permission.WRITE_SETTINGS",
+  "com.ritikrishu.botduetdot.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+  "com.sec.android.provider.badge.permission.READ",
+  "com.sec.android.provider.badge.permission.WRITE",
+  "com.sonyericsson.home.permission.BROADCAST_BADGE",
+  "com.sonymobile.home.permission.PROVIDER_INSERT_BADGE",
+  "me.everything.badger.permission.BADGE_COUNT_READ",
+  "me.everything.badger.permission.BADGE_COUNT_WRITE",
 ] as const;
 
 export const FORBIDDEN_ENTITLEMENTS = [

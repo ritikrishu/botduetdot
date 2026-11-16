@@ -443,8 +443,11 @@ export function checkAndroidManifest(
       "Android host must not end in t3.codes",
     ],
     [
-      elements("intent-filter").every((entry) => !entry.hasAttributeNS(ANDROID_NS, "autoVerify")),
-      "Android must not declare autoVerify",
+      // Library share filters declare autoVerify="false"; only App Link verification is forbidden.
+      elements("intent-filter").every(
+        (entry) => entry.getAttributeNS(ANDROID_NS, "autoVerify") !== "true",
+      ),
+      "Android must not declare autoVerify=true",
     ],
     [
       elements("provider").every((entry) =>

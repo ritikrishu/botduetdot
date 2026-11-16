@@ -434,7 +434,7 @@ describe("structural identity gates", () => {
       ['package="com.ritikrishu.botduetdot"', 'package="com.other.app"'],
       ['android:versionCode="2026111601"', 'android:versionCode="2026111600"'],
       ['android:scheme="botduetdot"', 'android:scheme="t3code"'],
-      ["<intent-filter>", '<intent-filter android:autoVerify="false">'],
+      ["<intent-filter>", '<intent-filter android:autoVerify="true">'],
       ['android:scheme="clerk"', 'android:scheme="clerk" android:host="app.t3.codes"'],
       ["botduetdot.fileprovider", "botduetdot-evil.fileprovider"],
       ["botduetdot.INTERNAL", "other.INTERNAL"],

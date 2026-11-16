@@ -84,6 +84,9 @@ it.each(["development", "preview", "production"] as const)(
     expect(result.android?.versionCode).toBe(2026111601);
     expect(result.plugins).toContain("./plugins/withAndroidReleaseSigning.cjs");
     expect(result.android?.blockedPermissions).toContain("android.permission.SYSTEM_ALERT_WINDOW");
+    expect(result.android?.blockedPermissions).toContain(
+      "com.google.android.c2dm.permission.RECEIVE",
+    );
     expect(JSON.stringify(result)).not.toMatch(/t3code|t3tools|t3\.codes|u\.expo\.dev|d763fcb8/);
     expect(original.updates?.enabled).toBe(true);
   },
