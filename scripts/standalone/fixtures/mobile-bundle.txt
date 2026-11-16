@@ -1,0 +1,14 @@
+const brand = { aboutCredits: "Based on T3 Code \xa9 2026 T3 Tools Inc. (MIT License)" };
+const notice = {
+  license:"MIT",name:"T3 Code",noticeText:"MIT License\nCopyright (c) 2026 T3 Tools Inc.",
+  sourceUrl:"https://github.com/pingdotgg/t3code",
+};
+const schema = "https://t3.codes/schema/t3.json";
+const description = "See https://t3.codes for documentation.";
+const preview = "const schema=`https://t3.codes/schema/t3.json`; const description=`See https://t3.codes for documentation.`;";
+const resource = { "service.namespace": "t3code" };
+const aliases = new Set(["t3code"]);
+const showcase = { projectId: "t3code" };
+const attribution = "t3code";
+const feed = attribution === "t3code";
+const queue = attribution === "t3code";

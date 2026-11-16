@@ -86,17 +86,89 @@ const schemaScopes = [
 
 // Counts are from the arm64 0.1.9-botduetdot.1 build; scopes ignore only content hashes.
 export const ABOUT_CREDITS = "Based on T3 Code © 2026 T3 Tools Inc. (MIT License)";
+export const ANDROID_JS_SCOPE = "apps/mobile/index.android.js";
+const androidJs = /^apps\/mobile\/index\.android\.js$/;
+const hermes = /^base\/assets\/index\.android\.bundle$/;
+const utf16 = (literal: string) => `${literal.split("").join("\0")}\0`;
+const mobileSchemaLiterals = [
+  {
+    literal: "https://t3.codes/schema/t3.json",
+    source: "packages/contracts/src/t3ProjectFile.ts:10",
+  },
+  {
+    literal: "See https://t3.codes for documentation.",
+    source: "packages/contracts/src/t3ProjectFile.ts:115",
+  },
+];
 
-// Hermes stores the runtime credit and the embedded preview script's credit as UTF-16LE.
+// Hermes keeps the credit and preview script in UTF-16LE; the other literals are ASCII (r10).
 export const HERMES_COUNTED_EXEMPTIONS: readonly CountedExemption[] = [
   {
-    scope: /^base\/assets\/index\.android\.bundle$/,
-    literal: `${ABOUT_CREDITS.split("").join("\0")}\0`,
-    count: 2,
-    reason: "MIT attribution in the runtime profile and embedded preview script (contract r9)",
+    scope: hermes,
+    literal: utf16(ABOUT_CREDITS),
+    count: 1,
+    reason:
+      "MIT attribution in the runtime profile; the preview no longer embeds it (contract r10)",
     source: "packages/contracts/src/brandStandalone.ts:66",
     text: true,
   },
+  {
+    scope: hermes,
+    literal: "T3 Code",
+    count: 1,
+    reason: "The MIT notice names the upstream work; any extra ASCII name fails (contract r10)",
+    source: "third-party-licenses.config.json:4",
+    text: true,
+  },
+  {
+    scope: hermes,
+    literal: "https://github.com/pingdotgg/t3code",
+    count: 1,
+    reason: "MIT notice credits its upstream source (contract r10)",
+    source: "third-party-licenses.config.json:7",
+    text: true,
+  },
+  ...mobileSchemaLiterals.flatMap(({ literal, source }) =>
+    [false, true].map((preview) => ({
+      scope: hermes,
+      literal: preview ? utf16(literal) : literal,
+      count: 1,
+      reason: `Shared t3.json format identifier in ${preview ? "UTF-16LE preview script" : "ASCII main bundle"} (contract r10)`,
+      source,
+      text: true as const,
+    })),
+  ),
+];
+
+export const ANDROID_JS_COUNTED_EXEMPTIONS: readonly CountedExemption[] = [
+  {
+    scope: androidJs,
+    literal: ABOUT_CREDITS.replace("©", String.raw`\xa9`),
+    count: 1,
+    reason: "MIT runtime attribution; Metro escapes the copyright character (contract r10)",
+    source: "packages/contracts/src/brandStandalone.ts:66",
+  },
+  {
+    scope: androidJs,
+    literal: 'license:"MIT",name:"T3 Code",noticeText:"MIT License',
+    count: 1,
+    reason: "The generated MIT notice names the upstream work (contract r10)",
+    source: "third-party-licenses.config.json:4",
+  },
+  {
+    scope: androidJs,
+    literal: 'sourceUrl:"https://github.com/pingdotgg/t3code"',
+    count: 1,
+    reason: "MIT notice credits its upstream source (contract r10)",
+    source: "third-party-licenses.config.json:7",
+  },
+  ...mobileSchemaLiterals.map(({ literal, source }) => ({
+    scope: androidJs,
+    literal,
+    count: 2,
+    reason: "Shared t3.json format identifier in the main bundle and preview script (contract r10)",
+    source,
+  })),
 ];
 
 export const COUNTED_EXEMPTIONS: readonly CountedExemption[] = [
@@ -234,6 +306,11 @@ export const COUNTED_EXEMPTIONS: readonly CountedExemption[] = [
 ];
 
 export const BARE_NAME_COUNTS = [
+  // packages/shared/src/{relayTracing.ts:169,t3McpToolPresentation.ts:93}: OTel namespace + MCP alias.
+  // apps/mobile/src/features/showcase/showcasePendingTasks.ts:15: fixture project ID.
+  // Attribution: packages/client-runtime/src/userMessage.ts:114 and
+  // apps/mobile/src/features/threads/{ThreadFeed.tsx:1969,ThreadQueueControl.tsx:93}.
+  [androidJs, 6],
   [server("ManagedEndpointRuntime"), 6],
   [server("binCli"), 1],
   [server("binMain"), 1],

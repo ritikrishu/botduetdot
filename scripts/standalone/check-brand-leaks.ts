@@ -14,6 +14,8 @@ import * as Schema from "effect/Schema";
 import { fromYaml } from "@t3tools/shared/schemaYaml";
 import {
   ANDROID_PERMISSIONS,
+  ANDROID_JS_COUNTED_EXEMPTIONS,
+  ANDROID_JS_SCOPE,
   BARE_NAME_COUNTS,
   COUNTED_EXEMPTIONS,
   DERIVED_CACHE_SCOPE,
@@ -115,7 +117,11 @@ function decodeHermesText(text: string) {
 
 export function scanText(
   file: ScanFile,
-  exemptions: readonly CountedExemption[] = [...COUNTED_EXEMPTIONS, ...HERMES_COUNTED_EXEMPTIONS],
+  exemptions: readonly CountedExemption[] = [
+    ...COUNTED_EXEMPTIONS,
+    ...HERMES_COUNTED_EXEMPTIONS,
+    ...ANDROID_JS_COUNTED_EXEMPTIONS,
+  ],
   countBare = true,
 ): Finding[] {
   const findings: Finding[] = [];
@@ -205,11 +211,6 @@ export function scanText(
         );
       }
     }
-  } else if (/index\.android\.bundle$/.test(file.scope)) {
-    addMatches(
-      "hermes-upstream-identity",
-      /(?:^|[^\w-])(?:t3code(?:-dev|-preview)?|\.t3)(?=[^\w:-]|$)/g,
-    );
   }
   return findings;
 }
@@ -217,7 +218,10 @@ export function scanText(
 export function scanCollection(
   files: readonly ScanFile[],
   exemptions: readonly CountedExemption[] = COUNTED_EXEMPTIONS,
-  bareCounts: readonly (readonly [RegExp, number])[] = BARE_NAME_COUNTS,
+  // Collections are desktop artifacts; the separately exported Android JS has its own gate.
+  bareCounts: readonly (readonly [RegExp, number])[] = BARE_NAME_COUNTS.filter(
+    ([scope]) => !scope.test(ANDROID_JS_SCOPE),
+  ),
 ): Finding[] {
   const findings: Finding[] = [];
   const permitted: CountedExemption[] = [];
@@ -781,6 +785,15 @@ export function checkMacRelease(directory: string, expectedVersion?: string): Fi
   ];
 }
 
+export function checkAndroidJs(bundle: string): Finding[] {
+  return scanText({
+    artifact: bundle,
+    scope: ANDROID_JS_SCOPE,
+    text: NodeFS.readFileSync(bundle, "utf8"),
+    javascript: true,
+  });
+}
+
 export function checkAndroidAab(
   aab: string,
   version: string,
@@ -864,6 +877,7 @@ export function main(args = process.argv.slice(2)): void {
       help: { type: "boolean" },
       "mac-release": { type: "string" },
       "android-aab": { type: "string" },
+      "android-js": { type: "string" },
       bundles: { type: "boolean" },
       source: { type: "boolean" },
       version: { type: "string" },
@@ -872,24 +886,38 @@ export function main(args = process.argv.slice(2)): void {
   });
   if (values.help) {
     print(
-      "Usage: node scripts/standalone/check-brand-leaks.ts --mac-release DIR | --android-aab AAB --version X.Y.Z-botduetdot.N --version-code YYYYMMDDNN | --bundles | --source\nChecks are read-only. Offsets are original-text character offsets (binary: byte offsets). --source is advisory; --bundles excludes source maps, as packaging does. No JS is executed. AAB requires bundletool, unzip and a JDK.",
+      "Usage: node scripts/standalone/check-brand-leaks.ts --mac-release DIR | --android-aab AAB --android-js BUNDLE --version X.Y.Z-botduetdot.N --version-code YYYYMMDDNN | --android-js BUNDLE | --bundles | --source\nChecks are read-only. Offsets are original-text character offsets (binary: byte offsets). --source is advisory; --bundles excludes source maps, as packaging does. No JS is executed. AAB requires bundletool, unzip, a JDK and --android-js. Export BUNDLE from the same checkout and release environment with expo export --platform android --no-bytecode. --android-js alone checks only that JS bundle, not the AAB.",
     );
     return;
   }
   if (
-    [values["mac-release"], values["android-aab"], values.bundles, values.source].filter(Boolean)
-      .length !== 1
+    [
+      values["mac-release"],
+      values["android-aab"] || values["android-js"],
+      values.bundles,
+      values.source,
+    ].filter(Boolean).length !== 1
   )
     throw new Error("Choose exactly one artifact mode; see --help.");
+  if (values["android-aab"] && !values["android-js"])
+    throw new Error(
+      "--android-aab requires --android-js from the same release export; see --help.",
+    );
   let findings: Finding[];
   if (values["mac-release"])
     findings = checkMacRelease(NodePath.resolve(values["mac-release"]), values.version);
   else if (values["android-aab"])
-    findings = checkAndroidAab(
-      NodePath.resolve(values["android-aab"]),
-      validateVersion(values.version ?? process.env.T3CODE_MOBILE_VERSION ?? ""),
-      validateVersionCode(values["version-code"] ?? process.env.T3CODE_ANDROID_VERSION_CODE ?? ""),
-    );
+    findings = [
+      ...checkAndroidJs(NodePath.resolve(values["android-js"]!)),
+      ...checkAndroidAab(
+        NodePath.resolve(values["android-aab"]),
+        validateVersion(values.version ?? process.env.T3CODE_MOBILE_VERSION ?? ""),
+        validateVersionCode(
+          values["version-code"] ?? process.env.T3CODE_ANDROID_VERSION_CODE ?? "",
+        ),
+      ),
+    ];
+  else if (values["android-js"]) findings = checkAndroidJs(NodePath.resolve(values["android-js"]));
   else if (values.bundles) {
     const files = ["apps/server/dist", "apps/desktop/dist-electron"].flatMap((directory) =>
       scanFiles(NodePath.join(REPO_ROOT, directory), directory, `${directory}/`, true),

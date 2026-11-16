@@ -111,9 +111,31 @@ runs the full Gradle task `:app:bundleRelease` (signing is read only for release
 task names skip it). If you run Metro yourself while testing, start it with the same `T3CODE_BRAND`
 as the native build; a mismatched Metro serves the other brand's JavaScript. Do not bypass the wrapper
 with a raw Gradle build for publication.
-The wrapper must prebuild production Android, build all ABIs, scan the exact AAB, verify its signing
-certificate against `STANDALONE_UPLOAD_CERT_SHA256` (not Android Debug), then stage
-`release/android/BotDuetDot-<version>-<versionCode>.aab` plus `.sha256`.
+The wrapper prebuilds production Android, builds all ABIs, then exports the same Metro entry as
+JavaScript with `expo export --platform android --no-bytecode` in a private temporary directory using
+the same release environment. The JS scan checks forbidden patterns, constructed upstream schemes and
+the exact count of internal `"t3code"` literals. Hermes still checks every forbidden pattern in ASCII
+and UTF-16, with exact counted attribution and shared-schema exemptions. Hermes string-table adjacency
+is not JavaScript syntax, so bare-token and constructed-scheme checks belong to the JS scan.
+Both bundles must pass the same release gate, along with AAB manifest/config checks and signing
+certificate verification against `STANDALONE_UPLOAD_CERT_SHA256` (not Android Debug). The wrapper emits
+`release/android/BotDuetDot-<version>-<versionCode>.aab`, `.sha256` and `.build.json`; `androidJsSha256`
+records the digest of the JS bytes that passed. The temporary export is removed on success or failure.
+
+To inspect an existing AAB, export JS from its exact checkout with the release environment above:
+
+```bash
+android_js_dir=$(mktemp -d)
+(cd apps/mobile && vp exec expo export --platform android --no-bytecode --output-dir "$android_js_dir")
+node scripts/standalone/check-brand-leaks.ts --android-aab /path/to/release.aab \
+  --android-js "$android_js_dir"/_expo/static/js/android/index-*.js \
+  --version 0.1.9-botduetdot.1 --version-code 2026111601
+```
+
+`--android-aab` requires `--android-js`; the checker does not run Metro or verify that a separately
+supplied export matches the AAB's build environment. Use the wrapper for release builds. For a quick
+JS-only check, pass `--android-js BUNDLE` alone; it does not check the AAB. Remove the temporary export
+after inspection. [Expo CLI options](https://docs.expo.dev/more/expo-cli/#exporting) describe the export.
 
 Before first publication and after relevant upstream changes, complete contract integration A–G:
 isolated explicit/default homes, official-app coexistence, brand-only deep links and pairing,

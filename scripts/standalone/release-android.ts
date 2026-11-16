@@ -11,6 +11,7 @@ import { loadRepoEnv } from "../lib/public-config.ts";
 import { validateVersion, validateVersionCode } from "./brand-leak-rules.ts";
 import {
   checkAndroidAab,
+  checkAndroidJs,
   command,
   copyVerified,
   gateArtifacts,
@@ -21,6 +22,7 @@ import {
   requireCleanTree,
   run,
   sha256,
+  walkFiles,
   type Environment,
 } from "./check-brand-leaks.ts";
 
@@ -34,7 +36,7 @@ const REQUIRED_ENV = [
 const HELP = `Usage: node scripts/standalone/release-android.ts [--version X.Y.Z-botduetdot.N] [--version-code YYYYMMDDNN] [--previous-version-code N] [--dry-run]
 Version defaults: T3CODE_MOBILE_VERSION, T3CODE_ANDROID_VERSION_CODE.
 --previous-version-code or STANDALONE_ANDROID_PREVIOUS_VERSION_CODE must be the highest code used on ANY Play track (0 for first upload).
---dry-run works without signing credentials; it prints missing prerequisites and never runs prebuild or Gradle.
+--dry-run works without signing credentials; it prints missing prerequisites and never runs prebuild, Gradle or export.
 Required signing env ONLY: STANDALONE_UPLOAD_STORE_FILE (absolute keystore path outside checkout),
 STANDALONE_UPLOAD_STORE_PASSWORD, STANDALONE_UPLOAD_KEY_ALIAS, STANDALONE_UPLOAD_KEY_PASSWORD,
 STANDALONE_UPLOAD_CERT_SHA256 (expected upload certificate, colon-separated or 64 hex digits).
@@ -42,9 +44,11 @@ Toolchains: JAVA_HOME (JDK 17), ANDROID_HOME or ANDROID_SDK_ROOT, vp, bundletool
 The wrapper sets T3CODE_BRAND=standalone, EXPO_PUBLIC_T3CODE_BRAND=standalone, APP_VARIANT=production,
 T3CODE_MOBILE_UPDATES_ENABLED=0, EXPO_NO_GIT_STATUS=1, NODE_ENV=production.
 Requires clean git. Expo --clean regenerates ignored apps/mobile/android; do not hand-edit native files.
-Builds :app:bundleRelease; verifies every JAR entry and upload certificate; checks staged AAB manifests,
-Hermes bytes and Expo config; copies only checked bytes to release/android/BotDuetDot-<version>-<code>.aab
-with .sha256 and .build.json. No Play upload. Enrol in Play App Signing and upload that AAB in Play Console.
+Builds :app:bundleRelease, then expo export --platform android --no-bytecode into a private temp directory
+with the same release environment. Gates the JS bundle together with staged AAB manifests, Hermes bytes,
+Expo config, every JAR entry and the upload certificate. Copies only checked bytes to
+release/android/BotDuetDot-<version>-<code>.aab with .sha256 and .build.json (including androidJsSha256).
+No Play upload. Enrol in Play App Signing and upload that AAB in Play Console.
 Example: node scripts/standalone/release-android.ts --version 0.1.9-botduetdot.1 --version-code 2026111601 --previous-version-code 0 --dry-run`;
 
 export function androidCredentialProblems(env: Environment): string[] {
@@ -136,7 +140,7 @@ export function main(args = process.argv.slice(2)): void {
     problems.push("Release output already exists; increase versionCode.");
   if (values["dry-run"]) {
     print(
-      `DRY RUN ${version} (${code}): expo prebuild --clean --platform android --no-install; gradlew :app:bundleRelease; stage privately; verify signature + certificate; check exact AAB; emit ${output}.\n${problems.length ? `Missing prerequisites:\n${problems.join("\n")}` : "Local prerequisites present."}\nDeferred: toolchain, keystore and artifact validation.\n${HELP}`,
+      `DRY RUN ${version} (${code}): expo prebuild --clean --platform android --no-install; gradlew :app:bundleRelease; stage privately; expo export --platform android --no-bytecode; verify signature + certificate; gate exact AAB + JS; record JS SHA-256; emit ${output}.\n${problems.length ? `Missing prerequisites:\n${problems.join("\n")}` : "Local prerequisites present."}\nDeferred: toolchain, keystore and artifact validation.\n${HELP}`,
     );
     return;
   }
@@ -170,8 +174,31 @@ export function main(args = process.argv.slice(2)): void {
       staged,
       NodeFS.constants.COPYFILE_EXCL,
     );
+    const jsDirectory = NodePath.join(temporary, "javascript");
+    run(
+      "vp",
+      [
+        "exec",
+        "expo",
+        "export",
+        "--platform",
+        "android",
+        "--no-bytecode",
+        "--output-dir",
+        jsDirectory,
+      ],
+      {
+        cwd: mobile,
+        env: toolEnv,
+      },
+    );
+    const jsBundles = walkFiles(NodePath.join(jsDirectory, "_expo/static/js/android")).filter(
+      (file) => file.endsWith(".js"),
+    );
+    if (jsBundles.length !== 1) throw new Error("Expected exactly one exported Android JS bundle.");
+    const jsBundle = jsBundles[0]!;
     const verifiedDigest = gateArtifacts(
-      [staged],
+      [staged, jsBundle],
       () => {
         const certificate = run(
           NodePath.join(env.JAVA_HOME!, "bin/keytool"),
@@ -189,9 +216,9 @@ export function main(args = process.argv.slice(2)): void {
           verification.stdout + verification.stderr,
           env.STANDALONE_UPLOAD_CERT_SHA256!,
         );
-        return checkAndroidAab(staged, version, code, toolEnv);
+        return [...checkAndroidAab(staged, version, code, toolEnv), ...checkAndroidJs(jsBundle)];
       },
-      ([digest]) => {
+      ([digest, androidJsSha256]) => {
         if (requireCleanTree() !== commit)
           throw new Error("Checkout changed during release build.");
         NodeFS.mkdirSync(NodePath.dirname(output), { recursive: true });
@@ -210,6 +237,7 @@ export function main(args = process.argv.slice(2)): void {
                 versionCode: code,
                 previousVersionCode: previous,
                 commit,
+                androidJsSha256,
                 uploadCertificateSha256: normalizeFingerprint(env.STANDALONE_UPLOAD_CERT_SHA256!),
               },
               null,

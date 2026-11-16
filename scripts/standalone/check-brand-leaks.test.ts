@@ -7,6 +7,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   checkAndroidManifest,
   checkAndroidAppName,
+  checkAndroidJs,
   checkEntitlements,
   checkExpoConfig,
   checkMacPlist,
@@ -16,6 +17,7 @@ import {
   checkUpdateManifest,
   copyVerified,
   gateArtifacts,
+  main,
   redact,
   scanCollection,
   scanText,
@@ -23,7 +25,9 @@ import {
 } from "./check-brand-leaks.ts";
 import {
   ABOUT_CREDITS,
+  ANDROID_JS_COUNTED_EXEMPTIONS,
   COUNTED_EXEMPTIONS,
+  FORBIDDEN_PATTERNS,
   HERMES_COUNTED_EXEMPTIONS,
   type CountedExemption,
 } from "./brand-leak-rules.ts";
@@ -221,37 +225,114 @@ describe("artifact leak rules", () => {
       scanText(js("removed", scope), []).some((item) => item.rule.startsWith("bare-name-count")),
     ).toBe(true);
   });
-  it("allows only counted Hermes attribution and still catches names and scheme fragments", () => {
-    const credit = HERMES_COUNTED_EXEMPTIONS[0]!.literal;
+  it("counts only the permitted Hermes literals in their exact ASCII/UTF-16 representations", () => {
+    const utf16 = (text: string) => Buffer.from(text, "utf16le").toString("latin1");
+    const literals = [
+      utf16(ABOUT_CREDITS),
+      "T3 Code",
+      "https://github.com/pingdotgg/t3code",
+      "https://t3.codes/schema/t3.json",
+      utf16("https://t3.codes/schema/t3.json"),
+      "See https://t3.codes for documentation.",
+      utf16("See https://t3.codes for documentation."),
+    ];
     const file = {
       artifact: "fixture.aab!/base/assets/index.android.bundle",
       scope: "base/assets/index.android.bundle",
-      text: `\x00${credit}\x00${credit}\x00t3code\x00://\x00.t3\x00t3.codes\x00T3 Code\x00${Buffer.from("Update T3 Code", "utf16le").toString("latin1")}`,
+      text: literals.join("\0"),
       javascript: false,
     };
-    const result = scanText(file);
-    expect(result.filter((item) => item.rule === "hermes-upstream-identity")).toHaveLength(2);
-    expect(result.some((item) => item.rule === "t3-domain")).toBe(true);
-    const names = result.filter((item) => item.rule === "upstream-name");
-    expect(names).toHaveLength(2);
-    expect(names.map((item) => item.offset)).toEqual([
-      file.text.indexOf("T3 Code"),
-      file.text.lastIndexOf(Buffer.from("T3 Code", "utf16le").toString("latin1")),
-    ]);
-    expect(scanText({ ...file, text: `${credit}\0${credit}` })).toEqual([]);
-    for (const text of [credit, `${credit}\0${credit}\0${credit}`]) {
-      const failures = scanText({ ...file, text });
-      expect(failures.some((item) => item.rule.startsWith("exemption-count"))).toBe(true);
-      expect(failures.some((item) => item.rule === "upstream-name")).toBe(true);
+    expect(scanText(file)).toEqual([]);
+    for (const literal of literals) {
+      for (const text of [file.text.replace(literal, ""), `${file.text}\0${literal}`]) {
+        const failures = scanText({ ...file, text });
+        expect(failures.some((item) => item.rule.startsWith("exemption-count"))).toBe(true);
+        if (text.length > file.text.length)
+          expect(failures.some((item) => !item.rule.startsWith("exemption-count"))).toBe(true);
+      }
+    }
+    for (const text of [`${file.text}\0Update T3 Code`, `${file.text}\0${utf16("T3 Code")}`])
+      expect(scanText({ ...file, text }).some((item) => item.rule === "upstream-name")).toBe(true);
+    expect(scanText({ ...file, scope: "other/index.android.bundle" }).length).toBeGreaterThan(0);
+    expect(
+      scanText({ ...file, text: file.text.replace(utf16(ABOUT_CREDITS), ABOUT_CREDITS) }).some(
+        (item) => item.rule.startsWith("exemption-count"),
+      ),
+    ).toBe(true);
+    expect(HERMES_COUNTED_EXEMPTIONS.every((item) => item.reason && item.source)).toBe(true);
+  });
+  it("leaves Hermes bare tokens to the JS gate because string-table adjacency is not syntax", () => {
+    const text = "t3code\0.t3\0t3code.preferences\0t3code-dev\0t3code-preview\0://";
+    for (const value of [text, text.split("\0").reverse().join("\0")]) {
+      expect(
+        scanText({ ...js(value, "base/assets/index.android.bundle"), javascript: false }, []),
+      ).toEqual([]);
+    }
+    const samples = [
+      "T3 Code",
+      "t3.codes",
+      "pingdotgg",
+      "com.t3tools",
+      "registry.npmjs.org/t3",
+      "u.expo.dev",
+      "d763fcb8-d37c-41ea-a773-b54a0ab4a454",
+      "phc_fixture",
+      "pk_live_abcdefghijkl",
+      "t3code-v2",
+      "t3code://pair",
+      '".t3"',
+    ];
+    expect(samples).toHaveLength(FORBIDDEN_PATTERNS.length);
+    for (const encoding of ["latin1", "utf16le"] as const) {
+      const bytes = Buffer.from(samples.join("\0"), encoding).toString("latin1");
+      const findings = scanText(
+        { ...js(bytes, "base/assets/index.android.bundle"), javascript: false },
+        [],
+      );
+      expect(new Set(findings.map((item) => item.rule))).toEqual(
+        new Set(FORBIDDEN_PATTERNS.map(([rule]) => rule)),
+      );
+      expect(findings.find((item) => item.rule === "upstream-owner")?.offset).toBe(
+        bytes.indexOf(Buffer.from("pingdotgg", encoding).toString("latin1")),
+      );
+    }
+  });
+  it("ratchets the mobile JS count and rejects constructed schemes even at the allowed count", () => {
+    const text = fixture("mobile-bundle.txt");
+    const scope = "apps/mobile/index.android.js";
+    expect(scanText(js(text, scope))).toEqual([]);
+    for (const changed of [text.replace('"t3code"', '"removed"'), `${text}; "t3code";`]) {
+      expect(
+        scanText(js(changed, scope)).some((item) => item.rule.startsWith("bare-name-count")),
+      ).toBe(true);
+    }
+    const scheme = text.replace(
+      'const attribution = "t3code";',
+      'const s="t3code"; const url=s+"://pair";',
+    );
+    const findings = scanText(js(scheme, scope));
+    expect(findings.some((item) => item.rule === "constructed-upstream-scheme")).toBe(true);
+    expect(findings.some((item) => item.rule.startsWith("bare-name-count"))).toBe(false);
+    for (const { literal } of ANDROID_JS_COUNTED_EXEMPTIONS) {
+      for (const changed of [text.replace(literal, "removed"), `${text}; ${literal}`])
+        expect(
+          scanText(js(changed, scope)).some((item) => item.rule.startsWith("exemption-count")),
+        ).toBe(true);
     }
     expect(
-      scanText({ ...file, text: credit, scope: "other/index.android.bundle" }).map(
-        (item) => item.rule,
-      ),
-    ).toEqual(["upstream-name"]);
-    expect(
-      scanText({ ...file, text: ABOUT_CREDITS }).some((item) => item.rule === "upstream-name"),
+      scanText(js(`${text}; "T3 Code";`, scope)).some((item) => item.rule === "upstream-name"),
     ).toBe(true);
+    expect(scanText(js(text, "unrelated.js")).length).toBeGreaterThan(0);
+    using temp = temporary();
+    const bundle = NodePath.join(temp.directory, "index-hash.js");
+    NodeFS.writeFileSync(bundle, text);
+    expect(checkAndroidJs(bundle)).toEqual([]);
+    NodeFS.appendFileSync(bundle, '\n"t3code";');
+    expect(checkAndroidJs(bundle).some((item) => item.rule.startsWith("bare-name-count"))).toBe(
+      true,
+    );
+    expect(() => main(["--android-aab", "fixture.aab"])).toThrow("requires --android-js");
+    expect(() => main(["--bundles", "--android-js", bundle])).toThrow("exactly one artifact mode");
   });
   it("counts only the complete MIT credit and rejects extra app-name copy", () => {
     const scope = "apps/server/dist/client/assets/index-fixture.js";
@@ -434,6 +515,39 @@ it("the shared release gate emits nothing for a leaking fixture or a modified ch
   expect(NodeFS.existsSync(output)).toBe(false);
   gateArtifacts([artifact], () => [], emit);
   expect(NodeFS.readFileSync(output, "utf8")).toBe(NodeFS.readFileSync(artifact, "utf8"));
+
+  const companion = NodePath.join(temp.directory, "index.android.js");
+  NodeFS.writeFileSync(companion, fixture("mobile-bundle.txt"));
+  const digests = gateArtifacts(
+    [artifact, companion],
+    () => checkAndroidJs(companion),
+    (hashes) => hashes,
+  );
+  expect(digests[1]).toBe(
+    NodeCrypto.createHash("sha256").update(NodeFS.readFileSync(companion)).digest("hex"),
+  );
+  expect(() =>
+    gateArtifacts(
+      [artifact, companion],
+      () => {
+        NodeFS.appendFileSync(companion, "\n// changed after inspection");
+        return [];
+      },
+      () => {
+        throw new Error("must not emit");
+      },
+    ),
+  ).toThrow("changed during verification");
+  NodeFS.appendFileSync(companion, '\n"t3code";');
+  expect(() =>
+    gateArtifacts(
+      [artifact, companion],
+      () => checkAndroidJs(companion),
+      () => {
+        throw new Error("must not emit");
+      },
+    ),
+  ).toThrow("Release blocked");
 });
 
 it("refuses an artifact swapped between verification and output", () => {
