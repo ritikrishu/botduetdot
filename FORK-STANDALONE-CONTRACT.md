@@ -199,6 +199,16 @@ first-impression branding; **P2** = cosmetic or rare path.
 - `apps/marketing` (t3.codes site), `infra/relay`, `infra/task-cache`, `packaging/aur`, hosted web deploy: **OUT**.
 - `.github/workflows/*`: upstream pipelines are gated to `pingdotgg/t3code` (`release.yml:53`, `publish-aur.yml:40`, `mobile-eas-production.yml:77`, `deploy-relay.yml:29`, …) and use Blacksmith runners, task cache, Vercel, Discord, a release GitHub App and the relay config. **Not reusable**; Actions are currently **enabled** on `ritikrishu/botduetdot` (§7).
 - `LICENSE` (MIT, "Copyright (c) 2026 T3 Tools Inc."): KEEP unchanged. In-app license screens omit first-party `@t3tools/*` packages (`docs/internals/open-source-licenses.md`), so add the notice (S34) and About credits (S36).
+  **r9 amendment (orchestrator, from integration check D):** supersedes "Other 'T3 Code' copy: KEEP v1"
+  and "Model-facing 'T3 Code' text". The packaged app showed the T3 wordmark as its sidebar title (fixed
+  in `1b964123cd`) and ~400 literal "T3 Code" strings remain across web, mobile, desktop, server and
+  packages. On Play that reads as impersonation. Standalone builds therefore rewrite the literal
+  `T3 Code` to `BRAND.name` at bundle time in first-party source modules (web Vite, server and desktop
+  `vp pack`, mobile Metro), with upstream builds byte-identical (the plugin is absent or a no-op). The
+  rewrite skips `packages/contracts/src/brand*.ts` (upstream profile and the MIT `aboutCredits`) and an
+  explicit, reasoned exclusion list for text that names the official product on purpose. A new
+  `upstream-name` leak rule (`/T3 Code/`) gates standalone bundles, Hermes included, with counted
+  exemptions only for the attribution.
   **r8 amendment (orchestrator, from the T7 artifact scan):** the leak checker gates real identity and
   credentials, not dormant code. (a) `clerk-key` matches a key shape (prefix + ≥10 base64 chars); bare
   `pk_live_`/`pk_test_` in `@clerk/shared` and `relayAuth.ts` parsers stay, since `t3Connect: false` never
