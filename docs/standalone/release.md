@@ -24,9 +24,20 @@ Do not use the older preview/debug-signed APK procedure in FORK.md for Play.
    ```
 
    Create the private `keys` directory first. Back up the keystore, passwords, alias and certificate
-   SHA-256 offline. Put `STANDALONE_UPLOAD_STORE_FILE`, `STANDALONE_UPLOAD_STORE_PASSWORD`,
-   `STANDALONE_UPLOAD_KEY_ALIAS`, `STANDALONE_UPLOAD_KEY_PASSWORD`, and
-   `STANDALONE_UPLOAD_CERT_SHA256` in private `~/.gradle/gradle.properties`.
+   SHA-256 offline. Keep the password in the login keychain
+   (`security add-generic-password -a "$USER" -s botduetdot-upload -w`) and print the certificate
+   SHA-256 with `keytool -list -v -keystore "$HOME/keys/botduetdot-upload.p12"`.
+   `release-android.ts` reads all five values from the environment of the release shell (not
+   `gradle.properties`) and refuses a keystore inside the checkout:
+
+   ```bash
+   export STANDALONE_UPLOAD_STORE_FILE="$HOME/keys/botduetdot-upload.p12"
+   export STANDALONE_UPLOAD_KEY_ALIAS=upload
+   export STANDALONE_UPLOAD_CERT_SHA256="AB:CD:…"  # from keytool -list -v
+   export STANDALONE_UPLOAD_STORE_PASSWORD="$(security find-generic-password -s botduetdot-upload -w)"
+   export STANDALONE_UPLOAD_KEY_PASSWORD="$STANDALONE_UPLOAD_STORE_PASSWORD"
+   ```
+
    The [signing plugin](../../apps/mobile/plugins/withAndroidReleaseSigning.cjs) requires release
    credentials. Enrol in Play App Signing: Google holds the app-signing key; this upload key signs
    submissions. Never substitute the Android debug key.
@@ -68,10 +79,17 @@ export PATH="$HOME/.local/share/vite-plus/bin:$PATH"
 export T3CODE_BRAND=standalone
 node scripts/standalone/check-brand-leaks.ts --source
 node scripts/standalone/release-desktop-mac.ts --version 0.1.9-botduetdot.1 --dry-run
-node scripts/standalone/release-desktop-mac.ts --version 0.1.9-botduetdot.1
-# After checking release/mac/<version>/, publish the same bytes to ritikrishu/botduetdot:
-node scripts/standalone/release-desktop-mac.ts --version 0.1.9-botduetdot.1 --publish --notes-file notes.md
+git push origin HEAD  # origin = ritikrishu/botduetdot; --target needs the commit there
+node scripts/standalone/release-desktop-mac.ts --version 0.1.9-botduetdot.1 \
+  --publish --notes-file ~/botduetdot-notes/0.1.9-botduetdot.1.md
 ```
+
+Publishing is one run: it builds, verifies both containers, stages the checked bytes in
+`release/mac/<version>/` and only then uploads exactly those files. There is no publish-only mode,
+and the wrapper refuses a version whose `release/mac/<version>/` already exists. A run without
+`--publish` is a local rehearsal that reserves that output directory: publish the next `.N`, or delete
+the directory first. Keep the notes file outside the checkout; an untracked file fails the clean-tree
+check. With `--publish`, the wrapper checks before building that the commit is on GitHub.
 
 `--dry-run` lists missing prerequisites without credentials, building or network access. The build
 needs a clean committed checkout, macOS arm64, Xcode tools, `gh` authentication and a Rust toolchain
@@ -162,8 +180,7 @@ updates; Settings → Maintenance → Provider update checks turns the latter of
 
 ## Publish and promote
 
-After verification, rerun the desktop wrapper with the same version and `--publish` using T7's
-confirmed workflow. It must verify hashes and upload the five checked files to
+The desktop wrapper's `--publish` run (above) verifies hashes and uploads the five checked files to
 `ritikrishu/botduetdot` as a full release. Do not silently replace published artifacts; issue a new
 version for a correction. Check the release download and update feed after publication.
 

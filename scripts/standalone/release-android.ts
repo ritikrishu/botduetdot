@@ -15,6 +15,7 @@ import {
   command,
   copyVerified,
   gateArtifacts,
+  isInsideCheckout,
   print,
   printError,
   redact,
@@ -165,7 +166,7 @@ export function main(args = process.argv.slice(2)): void {
   if (
     !NodePath.isAbsolute(keystore) ||
     !NodeFS.statSync(keystore).isFile() ||
-    NodeFS.realpathSync(keystore).startsWith(`${REPO_ROOT}${NodePath.sep}`)
+    isInsideCheckout(keystore)
   )
     throw new Error("Upload keystore must be an absolute file outside the checkout.");
   const toolEnv = { ...env, PATH: `${env.JAVA_HOME}/bin:${env.PATH ?? ""}` };

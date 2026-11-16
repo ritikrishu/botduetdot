@@ -17,6 +17,7 @@ import {
   printError,
   copyVerified,
   gateArtifacts,
+  isInsideCheckout,
   redact,
   REPO_ROOT,
   requireCleanTree,
@@ -73,8 +74,7 @@ export function macCredentialProblems(env: Environment): string[] {
 function externalSecretPath(value: string, name: string): void {
   if (!NodePath.isAbsolute(value) || !NodeFS.statSync(value).isFile())
     throw new Error(`${name} must be an absolute existing file path.`);
-  if (NodeFS.realpathSync(value).startsWith(`${REPO_ROOT}${NodePath.sep}`))
-    throw new Error(`${name} must be outside the checkout.`);
+  if (isInsideCheckout(value)) throw new Error(`${name} must be outside the checkout.`);
 }
 function requireDeveloperId(env: NodeJS.ProcessEnv): void {
   if (env.CSC_LINK) {
@@ -147,6 +147,18 @@ function verifyMacContainers(directory: string, version: string, teamId: string)
     });
     if (hashes[0] !== hashes[1]) throw new Error("DMG and update ZIP app CDHashes differ.");
   });
+}
+// gh release create --target needs the commit on GitHub; check before spending the version.
+function requireCommitPublished(commit: string): void {
+  const response = command("gh", [
+    "api",
+    `repos/${RELEASE_IDENTITY.repository}/commits/${commit}`,
+    "--silent",
+  ]);
+  if (response.status !== 0)
+    throw new Error(
+      `Push commit ${commit.slice(0, 12)} to ${RELEASE_IDENTITY.repository} before publishing.`,
+    );
 }
 function requireReleaseAbsent(version: string): void {
   const tag = `v${version}`;
@@ -252,6 +264,7 @@ export function main(args = process.argv.slice(2)): void {
   if (env.APPLE_API_KEY) externalSecretPath(env.APPLE_API_KEY, "APPLE_API_KEY");
   requireDeveloperId(env);
   requireReleaseAbsent(version);
+  if (values.publish) requireCommitPublished(commit);
   const notes = values["notes-file"]
     ? NodeFS.readFileSync(NodePath.resolve(values["notes-file"]), "utf8")
     : "";
