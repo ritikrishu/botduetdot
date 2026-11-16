@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -97,6 +98,7 @@ export const make = Effect.gen(function* () {
     );
     yield* electronApp.setAboutPanelOptions({
       applicationName: environment.displayName,
+      ...(BRAND.desktop.aboutCredits ? { credits: BRAND.desktop.aboutCredits } : {}),
       applicationVersion: environment.appVersion,
       version: Option.getOrElse(commitHash, () => "unknown"),
     });

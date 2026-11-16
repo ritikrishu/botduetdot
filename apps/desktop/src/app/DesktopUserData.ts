@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
@@ -40,9 +41,13 @@ export const resolveUserDataPath = Effect.fn("desktop.userData.resolveUserDataPa
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const names = input.isDevelopment
-      ? { current: "t3code-dev", legacy: "T3 Code (Dev)" }
-      : { current: "t3code-v2", legacy: "T3 Code (Alpha)" };
+      ? {
+          current: BRAND.desktop.devUserDataDirName,
+          legacy: BRAND.desktop.devLegacyUserDataDirName,
+        }
+      : { current: BRAND.desktop.userDataDirName, legacy: BRAND.desktop.legacyUserDataDirName };
     const destinationPath = path.join(input.appDataDirectory, names.current);
+    if (names.legacy === null) return destinationPath;
     const legacyPath = path.join(input.appDataDirectory, names.legacy);
     const inspect = (resourcePath: string) =>
       fs
