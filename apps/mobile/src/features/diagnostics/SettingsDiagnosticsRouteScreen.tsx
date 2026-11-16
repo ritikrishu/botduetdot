@@ -26,6 +26,7 @@ import {
   parseStartupCrashRecords,
   type StartupCrashRecord,
 } from "./crash-log-model";
+import { BRAND_NAME } from "../../components/brandAssets";
 
 // expo-updates retains only seven days of logs.
 const LOG_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -86,9 +87,12 @@ export function SettingsDiagnosticsRouteScreen() {
 
   const records = state.status === "ready" ? state.records : [];
   const copyReport = async () => {
-    const ok = await tryCopyTextWithHaptic(formatStartupCrashReport(records, appIdentity()), {
-      target: "crash report",
-    });
+    const ok = await tryCopyTextWithHaptic(
+      formatStartupCrashReport(records, { ...appIdentity(), name: BRAND_NAME }),
+      {
+        target: "crash report",
+      },
+    );
     if (ok) setCopied(true);
   };
 

@@ -13,7 +13,7 @@ function withMobileBrandResolver(config, brand = process.env.T3CODE_BRAND) {
   ]);
   const resolveRequest = config.resolver.resolveRequest;
   config.resolver.resolveRequest = (context, moduleName, platform) => {
-    if (moduleName === "expo-observe") {
+    if (moduleName === "expo-observe" || moduleName.startsWith("expo-observe/")) {
       return { type: "sourceFile", filePath: observeStub };
     }
     const resolved = (resolveRequest ?? context.resolveRequest)(context, moduleName, platform);
