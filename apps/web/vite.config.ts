@@ -12,6 +12,7 @@ import { defineConfig, type Connect, type Plugin } from "vite-plus";
 import * as Hash from "effect/Hash";
 import pkg from "./package.json" with { type: "json" };
 import pdfjsPkg from "pdfjs-dist/package.json" with { type: "json" };
+import { resolveBrandProfile } from "@t3tools/contracts/brandProfiles";
 
 import {
   DEV_PROXIED_ORIGIN_PRESERVING_PREFIXES,
@@ -22,6 +23,7 @@ import { brandBuildDefine } from "../../scripts/lib/brand-define";
 import { loadRepoEnv } from "../../scripts/lib/public-config";
 import { thirdPartyLicensesPlugin } from "../../scripts/lib/third-party-licenses";
 import { tailwindPlugins } from "./vite/tailwind";
+import { transformBrandHtml } from "./vite/brandHtml";
 import { warmBundledDevPlugin } from "./vite/warmBundledDev";
 
 const repoEnv = loadRepoEnv();
@@ -84,7 +86,7 @@ const unitTestProject = {
   extends: true,
   test: {
     name: "unit",
-    include: ["src/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx}", "vite/**/*.test.ts"],
     exclude: ["src/**/*.browser.test.{ts,tsx}"],
     hookTimeout: 15_000,
     testTimeout: 15_000,
@@ -255,6 +257,7 @@ const configuredAllowedHosts = (process.env.T3CODE_DEV_ALLOWED_HOSTS ?? "")
 const allowedHosts = [".ts.net", ...configuredAllowedHosts];
 
 export default defineConfig(() => {
+  const brand = resolveBrandProfile(process.env.T3CODE_BRAND);
   return {
     run: {
       tasks: {
@@ -267,6 +270,10 @@ export default defineConfig(() => {
     },
     assetsInclude: ["**/*.wasm"],
     plugins: [
+      {
+        name: "t3code:brand-html",
+        transformIndexHtml: (html) => transformBrandHtml(html, brand),
+      },
       devCompressionPlugin(),
       chunkCycleGuardPlugin(),
       builtDev

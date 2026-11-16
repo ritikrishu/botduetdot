@@ -3,7 +3,7 @@ import type { DesktopBridge, DesktopUpdateState } from "@t3tools/contracts";
 
 const FALLBACK_TRIAGE_COMMAND = "npx t3 triage";
 const DOWNLOAD_URL = BRAND.links.download;
-const ISSUE_URL = `${BRAND.links.issues}/new`;
+const ISSUE_URL = BRAND.links.issues;
 const LAST_FAILURE_KEY = "t3code:boot-failed-at";
 const REPEAT_FAILURE_MS = 5 * 60_000;
 const MAX_CAUSES = 3;
@@ -256,7 +256,7 @@ function mountUpdateButton(
 }
 
 export function showBootError(error: unknown) {
-  console.error("T3 Code failed to start.", error);
+  console.error(`${BRAND.name} failed to start.`, error);
   const bootShell = document.getElementById("boot-shell");
   if (!bootShell) return;
 
@@ -275,7 +275,7 @@ export function showBootError(error: unknown) {
   };
 
   const message = element("div", {}, [
-    element("h1", { textContent: "T3 Code failed to start" }),
+    element("h1", { textContent: `${BRAND.name} failed to start` }),
     element("p", {
       textContent: offline
         ? "This browser appears to be offline. Check the connection, then reload."
@@ -294,32 +294,43 @@ export function showBootError(error: unknown) {
   const updateNote = element("p", { id: "boot-error-update-note", hidden: true });
   if (bridge) mountUpdateButton(bridge, update, updateNote, announce);
 
-  const command = element("code", { textContent: FALLBACK_TRIAGE_COMMAND });
-  const copyCommand = element("button", {
-    className: "boot-error-icon",
-    type: "button",
-    title: "Copy command",
-    innerHTML: COPY_ICON,
-  });
-  copyCommand.setAttribute("aria-label", "Copy command");
-  copyCommand.addEventListener("click", () =>
-    copyText(
-      command,
-      () => {
-        copyCommand.innerHTML = CHECK_ICON;
-        copyCommand.title = "Copied";
-        copyCommand.setAttribute("aria-label", "Copied");
-        announce("Copied to clipboard.");
-      },
-      (hint) => {
-        copyCommand.textContent = hint;
-        copyCommand.title = hint;
-        copyCommand.setAttribute("aria-label", hint);
-        announce(COPY_BLOCKED);
-      },
-    ),
-  );
-  void resolveTriageCommand(bridge).then((value) => (command.textContent = value));
+  const triage: HTMLElement[] = [];
+  if (BRAND.features.triage) {
+    const command = element("code", { textContent: FALLBACK_TRIAGE_COMMAND });
+    const copyCommand = element("button", {
+      className: "boot-error-icon",
+      type: "button",
+      title: "Copy command",
+      innerHTML: COPY_ICON,
+    });
+    copyCommand.setAttribute("aria-label", "Copy command");
+    copyCommand.addEventListener("click", () =>
+      copyText(
+        command,
+        () => {
+          copyCommand.innerHTML = CHECK_ICON;
+          copyCommand.title = "Copied";
+          copyCommand.setAttribute("aria-label", "Copied");
+          announce("Copied to clipboard.");
+        },
+        (hint) => {
+          copyCommand.textContent = hint;
+          copyCommand.title = hint;
+          copyCommand.setAttribute("aria-label", hint);
+          announce(COPY_BLOCKED);
+        },
+      ),
+    );
+    void resolveTriageCommand(bridge).then((value) => (command.textContent = value));
+    triage.push(
+      element("div", {}, [
+        element("p", {
+          textContent: `Run this on the computer that runs ${BRAND.name}. Your agent can check the local logs and help you file a bug report.`,
+        }),
+        element("div", { id: "boot-error-command" }, [command, copyCommand]),
+      ]),
+    );
+  }
 
   let report = "(no error message)";
   try {
@@ -344,11 +355,13 @@ export function showBootError(error: unknown) {
   );
 
   const issue = new URL(ISSUE_URL);
-  issue.searchParams.set("template", "bug_report.yml");
-  issue.searchParams.set("title", "T3 Code failed to start");
-  issue.searchParams.set("area", "apps/web");
-  issue.searchParams.set("version", `${environment.version} (${environment.channel})`);
-  issue.searchParams.set("environment", `${environment.surface}, ${environment.platform}`);
+  if (BRAND.features.triage) {
+    issue.searchParams.set("template", "bug_report.yml");
+    issue.searchParams.set("title", `${BRAND.name} failed to start`);
+    issue.searchParams.set("area", "apps/web");
+    issue.searchParams.set("version", `${environment.version} (${environment.channel})`);
+    issue.searchParams.set("environment", `${environment.surface}, ${environment.platform}`);
+  }
   const link = (href: string, textContent: string) =>
     element("a", { href, textContent, target: "_blank", rel: "noreferrer" });
   const nightly = environment.channel === "nightly";
@@ -361,17 +374,11 @@ export function showBootError(error: unknown) {
             nightly ? `${DOWNLOAD_URL}?channel=nightly` : DOWNLOAD_URL,
             nightly
               ? "Download and reinstall the latest nightly build"
-              : "Download and reinstall T3 Code",
+              : `Download and reinstall ${BRAND.name}`,
           ),
         ]
       : []),
-    element("div", {}, [
-      element("p", {
-        textContent:
-          "Run this on the computer that runs T3 Code. Your agent can check the local logs and help you file a bug report.",
-      }),
-      element("div", { id: "boot-error-command" }, [command, copyCommand]),
-    ]),
+    ...triage,
     element("div", {}, [
       details,
       element("p", {
