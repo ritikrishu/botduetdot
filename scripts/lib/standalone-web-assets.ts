@@ -1,7 +1,13 @@
 import type { BrandProfile } from "@t3tools/contracts/brandProfiles";
+import { fromJsonStringPretty } from "@t3tools/shared/schemaJson";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Path from "effect/Path";
+import * as Schema from "effect/Schema";
+
+const ManifestJson = fromJsonStringPretty(Schema.Record(Schema.String, Schema.Unknown));
+const decodeManifest = Schema.decodeEffect(ManifestJson);
+const encodeManifest = Schema.encodeEffect(ManifestJson);
 
 export const applyStandaloneWebAssets = Effect.fn("applyStandaloneWebAssets")(function* (
   brand: BrandProfile,
@@ -14,13 +20,11 @@ export const applyStandaloneWebAssets = Effect.fn("applyStandaloneWebAssets")(fu
   const target = path.resolve(root, targetDir);
   const manifestPath = path.join(target, "manifest.webmanifest");
   const source = yield* fs.readFileString(manifestPath);
-  const manifest = yield* Effect.try(() => {
-    const value: unknown = JSON.parse(source);
-    if (typeof value !== "object" || value === null || Array.isArray(value)) {
-      throw new Error("Web manifest must be an object.");
-    }
-    return { ...value, name: brand.name, short_name: brand.name };
-  });
+  const manifest = {
+    ...(yield* decodeManifest(source)),
+    name: brand.name,
+    short_name: brand.name,
+  };
   for (const name of [
     "favicon.ico",
     "favicon-16x16.png",
@@ -34,5 +38,5 @@ export const applyStandaloneWebAssets = Effect.fn("applyStandaloneWebAssets")(fu
       path.join(target, name),
     );
   }
-  yield* fs.writeFileString(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  yield* fs.writeFileString(manifestPath, `${yield* encodeManifest(manifest)}\n`);
 });
