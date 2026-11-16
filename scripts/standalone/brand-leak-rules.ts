@@ -45,6 +45,7 @@ export const FORBIDDEN_PATTERNS = [
   ["upstream-npm", /registry\.npmjs\.org\/t3/gi],
   // The standalone CLI has no npm package; npx t3@… runs the upstream CLI.
   ["upstream-npx", /npx t3@/g],
+  ["upstream-home-label", /T3 home/g],
   ["expo-update", /u\.expo\.dev/gi],
   ["expo-project", /d763fcb8-d37c-41ea-a773-b54a0ab4a454/gi],
   ["posthog-key", /phc_/g],
@@ -110,8 +111,7 @@ export const HERMES_COUNTED_EXEMPTIONS: readonly CountedExemption[] = [
     literal: utf16(ABOUT_CREDITS),
     // The runtime profile and the preview WebView script, which reads BRAND for the CLI name.
     count: 2,
-    reason:
-      "MIT attribution in the runtime profile; the preview no longer embeds it (contract r10)",
+    reason: "MIT attribution in the runtime profile and the preview WebView script (contract r11)",
     source: "packages/contracts/src/brandStandalone.ts:66",
     text: true,
   },

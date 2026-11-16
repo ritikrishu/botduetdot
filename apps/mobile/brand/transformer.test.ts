@@ -61,3 +61,31 @@ it("rewrites Metro strings, templates, regexes and JSX while preserving source p
   expect(entry.originalLine).toBe(0);
   expect(entry.originalColumn).toBe(src.indexOf("const next"));
 });
+
+it("renames t3@ labels across template expressions but leaves npm commands", () => {
+  const delegate: Transformer = {
+    getCacheKey: () => "expo-key",
+    transform: ({ src, filename, plugins }) =>
+      transformSync(src, {
+        filename,
+        plugins,
+        babelrc: false,
+        configFile: false,
+        parserOpts: { plugins: ["typescript"] },
+      }),
+  };
+  const transformer = createBrandTransformer(delegate, STANDALONE_BRAND);
+  const src = [
+    "const v = '1';",
+    "const runner = 'npx';",
+    "const a = `Reconnected on t3@${v}. Use a separate T3 home.`;",
+    "const b = `${runner} t3@${v}`;",
+    "const c = `npx t3@${v} pair`;",
+    "const d = `t3@${v} is a preview build.`;",
+  ].join("\n");
+  const code = transformer.transform({ ...args, src }).code;
+  expect(code).toContain("Reconnected on botduetdot@${v}. Use a separate BotDuetDot home.");
+  expect(code).toContain("${runner} t3@${v}");
+  expect(code).toContain("npx t3@${v} pair");
+  expect(code).toContain("`botduetdot@${v} is a preview build.`");
+});

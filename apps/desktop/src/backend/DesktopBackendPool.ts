@@ -31,7 +31,6 @@ const LATEST_CLI_HINT =
   BRAND.npmPackage === null
     ? "Pass"
     : `Use \`npx ${BRAND.npmPackage}@latest\` if \`${BRAND.cliName}\` is missing or outdated, and pass`;
-const HOME_LABEL = BRAND.id === "upstream" ? "T3 home" : `${BRAND.name} home`;
 
 const { logWarning: logBackendPoolWarning } =
   DesktopObservability.makeComponentLogger("desktop-backend-pool");
@@ -184,8 +183,8 @@ export const layer = Layer.effect(
       onStateDirOwned: () =>
         electronDialog
           .showErrorBox(
-            `This ${HOME_LABEL} is unavailable`,
-            `Another T3 Code server, such as the background service, is using this data directory, or an older background service is set up for it. Stop that server or try \`t3 update\`. If the older launcher cannot update, run \`t3 service uninstall\` and optionally reinstall with \`t3 service install\` from a current CLI. ${LATEST_CLI_HINT} \`--base-dir\` with the service's ${HOME_LABEL} to each command. Then reopen T3 Code. You can also set a separate T3CODE_HOME and pair with the running server.`,
+            "This T3 home is unavailable",
+            `Another T3 Code server, such as the background service, is using this data directory, or an older background service is set up for it. Stop that server or try \`t3 update\`. If the older launcher cannot update, run \`t3 service uninstall\` and optionally reinstall with \`t3 service install\` from a current CLI. ${LATEST_CLI_HINT} \`--base-dir\` with the service's T3 home to each command. Then reopen T3 Code. You can also set a separate T3CODE_HOME and pair with the running server.`,
           )
           .pipe(Effect.andThen(electronApp.quit)),
     });

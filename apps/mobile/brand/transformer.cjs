@@ -23,9 +23,20 @@ function createBrandTransformer(delegate, brand) {
         StringLiteral: rewriteValue,
         DirectiveLiteral: rewriteValue,
         JSXText: rewriteValue,
-        TemplateElement({ node }) {
-          node.value.raw = rewrite(node.value.raw);
-          if (node.value.cooked !== null) node.value.cooked = rewrite(node.value.cooked);
+        // Babel splits templates at each expression; restore the `}` / `${` around every piece so
+        // rules that look at neighbours (`t3@${version}` labels, `${runner} t3@` commands) match
+        // exactly as the source-text rewrite does for the other bundles.
+        TemplateLiteral({ node }) {
+          node.quasis.forEach((quasi, index) => {
+            const before = index > 0 ? "}" : "";
+            const after = quasi.tail ? "" : "${";
+            const apply = (text) => {
+              const out = rewrite(`${before}${text}${after}`);
+              return out.slice(before.length, out.length - after.length);
+            };
+            quasi.value.raw = apply(quasi.value.raw);
+            if (quasi.value.cooked !== null) quasi.value.cooked = apply(quasi.value.cooked);
+          });
         },
         RegExpLiteral({ node }) {
           node.pattern = rewrite(node.pattern);

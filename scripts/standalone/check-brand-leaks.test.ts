@@ -278,6 +278,7 @@ describe("artifact leak rules", () => {
       "com.t3tools",
       "registry.npmjs.org/t3",
       "npx t3@latest",
+      "T3 home",
       "u.expo.dev",
       "d763fcb8-d37c-41ea-a773-b54a0ab4a454",
       "phc_fixture",

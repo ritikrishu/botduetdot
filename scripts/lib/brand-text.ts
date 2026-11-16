@@ -35,14 +35,20 @@ export function isBrandTextSource(id: string, root = repoRoot): boolean {
 // Subcommands of the CLI whose launcher standalone installs as BRAND.cliName.
 const CLI_SUBCOMMANDS =
   "app|auth|browser|config|connect|doctor|down|environment|install|pair|policy|project|serve|service|status|theme|thread|trace|triage|uninstall|up|update";
-// "T3 Code" contains a space, so it cannot be an identifier. Replacing source also covers regexes,
-// nested generated code, templates and JSX without changing newlines; neither shipped name contains
-// syntax delimiters. The CLI name is renamed only as quoted copy: `t3` alone or `t3 <subcommand>`,
-// never other template text such as the git message `t3 checkpoint ref=…`.
-const BRAND_TEXT_PATTERN = new RegExp(`T3 Code|(?<=\`)t3(?=\`| (?:${CLI_SUBCOMMANDS})\\b)`, "g");
+// "T3 Code" and "T3 home" contain a space, so they cannot be identifiers. Replacing source also
+// covers regexes, nested generated code, templates and JSX without changing newlines; neither
+// shipped name contains syntax delimiters. The CLI name is renamed only as quoted copy (`t3` alone
+// or `t3 <subcommand>`, never other template text such as the git message `t3 checkpoint ref=…`)
+// and in `t3@${version}` labels; npm commands (`npx t3@`, `install t3@`, `${runner} t3@`) stay.
+const BRAND_TEXT_PATTERN = new RegExp(
+  `T3 Code|T3 home|(?<=\`)t3(?=\`| (?:${CLI_SUBCOMMANDS})\\b)|(?<!\\} |npx |install )\\bt3@(?=\\$\\{)`,
+  "g",
+);
 
 function replacementFor(match: string, brand: BrandProfile): string {
-  return match === "T3 Code" ? brand.name : brand.cliName;
+  if (match === "T3 Code") return brand.name;
+  if (match === "T3 home") return `${brand.name} home`;
+  return match === "t3@" ? `${brand.cliName}@` : brand.cliName;
 }
 
 export function hasBrandText(code: string): boolean {

@@ -57,6 +57,21 @@ describe("bundle-time brand text", () => {
     );
   });
 
+  it("renames T3 home and t3@ version labels but not npm commands", () => {
+    const copy =
+      "a(`Use a separate T3 home.`); b(`Reconnected on t3@${v}.`); c(`t3@${v} is a preview build.`);";
+    expect(rewriteBrandText(copy, STANDALONE_BRAND)).toBe(
+      "a(`Use a separate BotDuetDot home.`); b(`Reconnected on botduetdot@${v}.`); c(`botduetdot@${v} is a preview build.`);",
+    );
+    for (const kept of [
+      "`npm install --global --prefix ${prefix} t3@${targetVersion}`",
+      "`${runner} t3@${targetVersion}`",
+      "`npx t3@${v} pair`",
+      "`xt3@${a}`; `t3@latest`",
+    ])
+      expect(rewriteBrandText(kept, STANDALONE_BRAND)).toBe(kept);
+  });
+
   it("limits rewriting to repository source, including queries and Windows paths", () => {
     for (const path of [
       "apps/web/src/a.tsx",

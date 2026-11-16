@@ -199,6 +199,12 @@ first-impression branding; **P2** = cosmetic or rare path.
 - `apps/marketing` (t3.codes site), `infra/relay`, `infra/task-cache`, `packaging/aur`, hosted web deploy: **OUT**.
 - `.github/workflows/*`: upstream pipelines are gated to `pingdotgg/t3code` (`release.yml:53`, `publish-aur.yml:40`, `mobile-eas-production.yml:77`, `deploy-relay.yml:29`, …) and use Blacksmith runners, task cache, Vercel, Discord, a release GitHub App and the relay config. **Not reusable**; Actions are currently **enabled** on `ritikrishu/botduetdot` (§7).
 - `LICENSE` (MIT, "Copyright (c) 2026 T3 Tools Inc."): KEEP unchanged. In-app license screens omit first-party `@t3tools/*` packages (`docs/internals/open-source-licenses.md`), so add the notice (S34) and About credits (S36).
+  **r11 amendment (orchestrator, from the council review):** supersedes r10's MIT credit count.
+  `serverBrowserStream.ts` reads `BRAND` for the CLI name, so the preview WebView script embeds the
+  standalone profile again. The credit therefore appears twice in Hermes and in the JS export (count 2).
+  The bundle-time rewrite also covers "T3 home" and `t3@${version}` labels (not npm commands). Native
+  Android strings come from resources the standalone plugin overrides, and the leak gate scans
+  `base/dex`, `base/lib`, `npx t3@` and "T3 home". The managed-policy file path comes from the brand.
   **r10 amendment (orchestrator, from the first Android bundle scan):** Hermes stores strings
   back to back in one table, so `hermes-upstream-identity` (bare `t3code`/`.t3` tokens) depends on
   string order, and it cannot tell internal identifiers that both brands keep (storage keys such as
