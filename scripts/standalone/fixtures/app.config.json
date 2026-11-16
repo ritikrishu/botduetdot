@@ -1,0 +1,6 @@
+{
+  "name": "BotDuetDot",
+  "slug": "botduetdot",
+  "updates": { "enabled": false },
+  "extra": { "brand": { "id": "standalone" } }
+}
