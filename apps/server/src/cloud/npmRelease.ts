@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import {
   ServerNpmReleaseError,
   ServerNpmReleaseInput,
@@ -56,6 +57,18 @@ function toRelease(spec: string, json: string) {
 }
 
 export const make = Effect.fn("NpmRelease.make")(function* () {
+  const packageName = BRAND.npmPackage;
+  if (!BRAND.features.npmReleaseLookup || packageName === null) {
+    return NpmRelease.of({
+      get: Effect.fn("NpmRelease.get")(() =>
+        Effect.fail(
+          new ServerNpmReleaseError({
+            reason: `Release lookups are not available in ${BRAND.name}.`,
+          }),
+        ),
+      ),
+    });
+  }
   const runner = yield* ProcessRunner.ProcessRunner;
   const http = yield* HttpClient.HttpClient;
   const lookupPublic = Effect.fn("NpmRelease.lookupPublic")(function* (spec: string) {
@@ -63,7 +76,7 @@ export const make = Effect.fn("NpmRelease.make")(function* () {
       reason: "npm is not installed and the public npm registry could not be reached.",
     });
     const json = yield* Effect.gen(function* () {
-      const response = yield* http.get(`https://registry.npmjs.org/t3/${spec}`);
+      const response = yield* http.get(`https://registry.npmjs.org/${packageName}/${spec}`);
       if (response.status === 404) return Option.none<string>();
       if (response.status < 200 || response.status >= 300) return yield* unreachable;
       return Option.some(yield* response.text);
@@ -87,7 +100,7 @@ export const make = Effect.fn("NpmRelease.make")(function* () {
           runner.run({
             command: npmPath,
             // Named fields keep the output small; the full package document grows with every release.
-            args: ["view", "--global", "--json", `t3@${spec}`, "version", "t3code"],
+            args: ["view", "--global", "--json", `${packageName}@${spec}`, "version", "t3code"],
             timeout: Duration.seconds(15),
             maxOutputBytes: 256 * 1024,
           }),

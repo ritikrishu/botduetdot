@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Option from "effect/Option";
@@ -44,7 +45,7 @@ const decodeInstallManifest = Schema.decodeUnknownEffect(Schema.fromJsonString(I
  */
 export const resolveEntryPath = Effect.gen(function* () {
   const npmLauncher = (yield* HostProcess.Environment).T3CODE_NPM_LAUNCHER_PATH?.trim();
-  if (npmLauncher) {
+  if (npmLauncher && BRAND.npmPackage !== null) {
     const fs = yield* FileSystem.FileSystem;
     const path = yield* Path.Path;
     const manifest = yield* fs
@@ -52,7 +53,7 @@ export const resolveEntryPath = Effect.gen(function* () {
       .pipe(Effect.flatMap(decodeInstallManifest), Effect.option);
     if (
       Option.isSome(manifest) &&
-      manifest.value.name === "t3" &&
+      manifest.value.name === BRAND.npmPackage &&
       manifest.value.version === packageJson.version
     ) {
       return npmLauncher;
@@ -63,6 +64,7 @@ export const resolveEntryPath = Effect.gen(function* () {
 });
 
 export const resolveServerInstallation = Effect.gen(function* () {
+  if (BRAND.npmPackage === null) return null;
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const platform = yield* HostProcess.Platform;
@@ -87,7 +89,7 @@ export const resolveServerInstallation = Effect.gen(function* () {
   const manifest = yield* fs
     .readFileString(path.join(packageRoot, "package.json"))
     .pipe(Effect.flatMap(decodeInstallManifest));
-  if (manifest.name !== "t3" || !manifest.bin) return null;
+  if (manifest.name !== BRAND.npmPackage || !manifest.bin) return null;
   const bin = yield* fs.realPath(path.join(packageRoot, manifest.bin.t3));
   const globalBin = yield* fs.realPath(path.join(prefix, "bin/t3"));
   if (globalBin !== bin || bin !== entry) return null;
@@ -97,7 +99,7 @@ export const resolveServerInstallation = Effect.gen(function* () {
 /** The original package spec is unavailable at startup; infer its channel from the version. */
 function suggestedPackageSpec(version: string): string {
   const channel = /^[^-+]+-(nightly|preview)\./.exec(version)?.[1];
-  return channel === undefined ? "t3" : `t3@${channel}`;
+  return channel === undefined ? BRAND.cliName : `${BRAND.cliName}@${channel}`;
 }
 
 function formatCliCommand(input: {
@@ -106,8 +108,8 @@ function formatCliCommand(input: {
   readonly version: string;
 }): string {
   const runner = detectCliRunner(input.entryPath);
-  if (runner === null) {
-    return `t3 ${input.subcommand}`;
+  if (runner === null || BRAND.npmPackage === null) {
+    return `${BRAND.cliName} ${input.subcommand}`;
   }
   return `${runner} ${suggestedPackageSpec(input.version)} ${input.subcommand}`;
 }
@@ -154,8 +156,9 @@ export const resolveHostCliCommand = Effect.fn("invocation.resolveHostCliCommand
   const withArgs = (prefix: string) =>
     [prefix, ...args.map((arg) => hostShellWord(platform, arg))].join(" ");
   const command = yield* resolveCliCommand(subcommand);
-  if (command !== `t3 ${subcommand}`) return { command: withArgs(command), launcher: false };
-  const onPath = yield* resolveCommandPath("t3");
+  if (command !== `${BRAND.cliName} ${subcommand}`)
+    return { command: withArgs(command), launcher: false };
+  const onPath = yield* resolveCommandPath(BRAND.cliName);
   if (onPath !== null) {
     const shim = (yield* HostProcess.Environment).T3CODE_CLI_PATH?.trim();
     const fs = yield* FileSystem.FileSystem;

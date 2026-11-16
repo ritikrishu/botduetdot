@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import {
   type AuthClientPresentationMetadata,
   ServerPrepareTriageError,
@@ -16,7 +17,7 @@ import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
 import { buildTriageAppPrompt, type TriageSourceClone } from "./triagePrompt.ts";
 import { triageSourceCacheDir, writeTriageSession } from "./triageSession.ts";
 
-const T3CODE_REPOSITORY_URL = "https://github.com/pingdotgg/t3code";
+const T3CODE_REPOSITORY_URL = `https://github.com/${BRAND.repository}`;
 
 // No tty: a credential prompt would hang until the timeout, so git must fail
 // instead. An empty GIT_ASKPASS also skips core.askPass and SSH_ASKPASS helpers.
@@ -43,7 +44,7 @@ const describeClient = (client: AuthClientPresentationMetadata) =>
     client.appVersion === undefined ? undefined : `version ${client.appVersion}`,
     client.os === undefined ? undefined : `on ${client.os}`,
     client.browser === undefined ? undefined : `in ${client.browser}`,
-    client.webDeployment === "hosted" ? "(app.t3.codes)" : undefined,
+    client.webDeployment === "hosted" ? `(${new URL(BRAND.hostedApp.url).host})` : undefined,
   ]
     .filter((part) => part !== undefined)
     .join(" ");
@@ -84,7 +85,9 @@ const make = Effect.gen(function* () {
   // seconds, and the user is writing their description meanwhile.
   const serviceScope = yield* Effect.scope;
   // Clones a previous server process left half done.
-  yield* fs.remove(stagingDir, { recursive: true }).pipe(Effect.ignore);
+  if (BRAND.features.triage) {
+    yield* fs.remove(stagingDir, { recursive: true }).pipe(Effect.ignore);
+  }
 
   // Fetches the exact commit `ls-remote` resolved, so the folder the session
   // names is the one that appears even when main moves meanwhile.
@@ -187,6 +190,11 @@ const make = Effect.gen(function* () {
 
   const prepare: TriageService["Service"]["prepare"] = Effect.fn("TriageService.prepare")(
     function* (input) {
+      if (!BRAND.features.triage) {
+        return yield* new ServerPrepareTriageError({
+          cause: new Error(`Triage is not available in ${BRAND.name}.`),
+        });
+      }
       const sourceClone = yield* startSourceClone().pipe(
         Effect.catch((error) =>
           Effect.succeed<TriageSourceClone>({

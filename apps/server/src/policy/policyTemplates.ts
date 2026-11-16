@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import type { ManagedPolicyDocument } from "@t3tools/contracts";
 import {
   WINDOWS_POLICY_KEY,
@@ -357,17 +358,17 @@ export function macosProfile(
   const profile = {
     PayloadContent: [
       {
-        PayloadDisplayName: "T3 Code policy",
-        PayloadIdentifier: `com.t3tools.t3code.policy.${uuids.payload}`,
-        PayloadType: "com.t3tools.t3code",
+        PayloadDisplayName: `${BRAND.name} policy`,
+        PayloadIdentifier: `${BRAND.managedPolicy.macDomain}.policy.${uuids.payload}`,
+        PayloadType: BRAND.managedPolicy.macDomain,
         PayloadUUID: uuids.payload,
         PayloadVersion: 1,
         ...document,
       },
     ],
-    PayloadDescription: "Configures T3 Code for every user on this Mac.",
-    PayloadDisplayName: `T3 Code policy for ${document.organization}`,
-    PayloadIdentifier: `com.t3tools.t3code.policy`,
+    PayloadDescription: `Configures ${BRAND.name} for every user on this Mac.`,
+    PayloadDisplayName: `${BRAND.name} policy for ${document.organization}`,
+    PayloadIdentifier: `${BRAND.managedPolicy.macDomain}.policy`,
     PayloadOrganization: document.organization,
     PayloadScope: "System",
     PayloadType: "Configuration",

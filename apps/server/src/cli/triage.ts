@@ -1,4 +1,5 @@
 // @effect-diagnostics nodeBuiltinImport:off
+import { BRAND } from "@t3tools/contracts/brand";
 import * as NodeChildProcess from "node:child_process";
 import * as NodeReadlinePromises from "node:readline/promises";
 
@@ -18,6 +19,15 @@ import { describeServerProcess, writeTriageSession } from "../triage/triageSessi
 import { baseDirFlag } from "./config.ts";
 import { interactiveStdin } from "./consoleStdin.ts";
 import { resolveCliCommand } from "./invocation.ts";
+
+class TriageUnavailableError extends Schema.TaggedError<TriageUnavailableError>()(
+  "TriageUnavailableError",
+  {},
+) {
+  override get message(): string {
+    return `Triage is not available in ${BRAND.name}. Report issues at ${BRAND.links.issues}.`;
+  }
+}
 
 interface TriageAgent {
   readonly id: "claude" | "codex";
@@ -122,6 +132,7 @@ export const triageCommand = Command.make("triage", {
   ),
   Command.withHandler((flags) =>
     Effect.gen(function* () {
+      if (!BRAND.features.triage) return yield* new TriageUnavailableError();
       // Triage is a user-facing feature: always the userdata state, never dev.
       const explicitBaseDir = Option.getOrUndefined(flags.baseDir);
       const envHome = yield* Config.String("T3CODE_HOME").pipe(Config.option);

@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import {
   EnvironmentId,
   ORCHESTRATION_PROTOCOL_VERSION,
@@ -271,11 +272,11 @@ export const make = Effect.gen(function* () {
       projectCloneTracking: true,
       projectOrganization: true,
       ignoredFileListing: true,
-      triage: true,
+      ...(BRAND.features.triage ? { triage: true } : {}),
       oneTimeSchedules: true,
       freshContext: true,
       scheduledTaskThreadModes: true,
-      npmReleaseLookup: true,
+      ...(BRAND.features.npmReleaseLookup ? { npmReleaseLookup: true } : {}),
       voiceTranscription: isSpeechPlatformSupported(hostPlatform, hostArchitecture, hostLibc),
       cloudVoiceTranscription: true,
       ...(serverSelfUpdate === null ? {} : { serverSelfUpdate }),
@@ -283,7 +284,12 @@ export const make = Effect.gen(function* () {
       ...(serverSelfUpdate === "boot-service" || desktopAppUpdate
         ? { serverSelfUpdateProgress: true }
         : {}),
-      ...(desktopAppUpdate ? { desktopAppUpdate: true, desktopAppChannelSwitch: true } : {}),
+      ...(desktopAppUpdate
+        ? {
+            desktopAppUpdate: true,
+            ...(BRAND.features.updateTrackSwitch ? { desktopAppChannelSwitch: true } : {}),
+          }
+        : {}),
       serverBrowser: true,
       peerLinks: true,
       mcpModeLimitHeader: true,

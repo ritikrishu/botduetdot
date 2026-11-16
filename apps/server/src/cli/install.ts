@@ -1,3 +1,4 @@
+import { BRAND } from "@t3tools/contracts/brand";
 import * as HostProcess from "@t3tools/shared/HostProcess";
 import { pathSetupCommand } from "@t3tools/shared/shell";
 import * as Console from "effect/Console";
@@ -43,6 +44,11 @@ const standaloneRuntime = Effect.gen(function* () {
 
 /** Links this runtime as the `t3` command the way the install scripts do, replacing only our own link. */
 export const installCli = Effect.fn("cli.install.install")(function* () {
+  if (BRAND.links.installSh === null && BRAND.links.installPs1 === null) {
+    return yield* new CliInstallError({
+      reason: `Use Settings → CLI in the ${BRAND.name} desktop app to install the command.`,
+    });
+  }
   const fs = yield* FileSystem.FileSystem;
   const path = yield* Path.Path;
   const platform = yield* HostProcess.Platform;
@@ -52,8 +58,8 @@ export const installCli = Effect.fn("cli.install.install")(function* () {
   const windows = platform === "win32";
   if (Option.isNone(runtime)) {
     const script = windows
-      ? "irm https://t3.codes/install.ps1 | iex"
-      : "curl -fsSL https://t3.codes/install.sh | sh";
+      ? `irm ${BRAND.links.installPs1} | iex`
+      : `curl -fsSL ${BRAND.links.installSh} | sh`;
     return yield* new CliInstallError({
       reason: `Only the standalone t3 can install itself. Use \`${script}\`, or Settings in the desktop app.`,
     });
@@ -308,6 +314,7 @@ export const offerCliInstall = Effect.fn("cli.install.offer")(function* <E, R, E
   const path = yield* Path.Path;
   const platform = yield* HostProcess.Platform;
   const environment = yield* HostProcess.Environment;
+  if (BRAND.npmPackage === null) return true;
   if (!input.interactive || environment.CI || environment.SUDO_USER) return true;
   if (environment.TERM === "dumb") return true;
   // `npx --yes` asks for no prompts; npm passes it on to the command as npm_config_yes.
