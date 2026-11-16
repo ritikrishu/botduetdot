@@ -1,3 +1,4 @@
+import { BRAND, isBrandAppProtocol } from "@t3tools/contracts/brand";
 import { readHostedPairingRequest } from "@t3tools/shared/remote";
 import * as Schema from "effect/Schema";
 
@@ -78,7 +79,11 @@ export function extractPairingUrlFromQrPayload(payload: string): string {
 
   try {
     const url = new URL(trimmed);
-    if (url.protocol === "t3code:") {
+    if (
+      BRAND.id === "upstream"
+        ? url.protocol === `${BRAND.schemes.production}:`
+        : isBrandAppProtocol(url.protocol, BRAND)
+    ) {
       const pairingUrl = url.searchParams.get(MOBILE_PAIRING_URL_PARAM)?.trim() ?? "";
       if (pairingUrl.length > 0) {
         return pairingUrl;

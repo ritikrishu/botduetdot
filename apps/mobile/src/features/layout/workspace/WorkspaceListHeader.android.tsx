@@ -1,3 +1,4 @@
+import { BRAND_NAME } from "../../../components/brandAssets";
 import { useEffect, useState } from "react";
 import { useNavigation, useNavigationState } from "@react-navigation/native";
 import { BackHandler, Keyboard } from "react-native";
@@ -58,7 +59,7 @@ export function WorkspaceListHeader(props: WorkspaceListHeaderProps) {
 
   return (
     <AppBar
-      title="T3 Code"
+      title={BRAND_NAME}
       titleContent={
         <WorkspaceBrandTitle
           accessibilityLabel={props.accessibilityLabel}

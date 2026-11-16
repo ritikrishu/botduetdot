@@ -1,3 +1,4 @@
+import { applyMobileBrand } from "./brand.config.ts";
 import type { ExpoConfig } from "expo/config";
 
 import { BRAND_ASSET_PATHS } from "../../scripts/lib/brand-assets.ts";
@@ -503,4 +504,4 @@ const config: ExpoConfig = {
   },
 };
 
-export default config;
+export default applyMobileBrand(config, { variant: APP_VARIANT, env: repoEnv });
