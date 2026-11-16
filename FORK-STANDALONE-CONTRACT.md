@@ -348,6 +348,15 @@ so it is not done either. The one cross-product allowance is CORS: the server ac
 renderer origins `t3code://app`/`t3code-dev://app` (S9), so the official desktop app can add a BotDuetDot
 server as a remote environment. Shared helpers take the scheme set from `brandAppSchemes(BRAND)`; the
 `t3code(?:-[a-z]+)?:` regexes (`promptLinks.ts:184`, `remote.ts:7`) become `brandAppSchemePattern(BRAND)`.
+**r4 amendment (orchestrator, from T2b) — applies to every seam:** never widen what an upstream site
+accepts. Where upstream checks a narrower set than `brandAppSchemePattern` (e.g. S19
+`providerAuthReturnUrl.ts:7` accepts only `t3code:`/`t3code-dev:`), derive the same narrow set from brand
+fields (`[brand.schemes.production, brand.schemes.development]` → upstream `t3code:`/`t3code-dev:`
+unchanged; standalone `botduetdot:`/`botduetdot-dev:`), and pin both in tests, including rejection of
+the other product's schemes and of arbitrary suffixes (`t3code-attacker:`). Use
+`brandAppSchemePattern`/`isBrandAppProtocol` only where upstream already used the open
+`t3code(?:-[a-z]+)?:` pattern.
+
 **r3 amendment (orchestrator, from T1):** `brandAppSchemePattern(UPSTREAM_BRAND)` must be exactly today's
 `/^t3code(?:-[a-z]+)?:$/` (upstream also accepts e.g. `t3code-nightly:`), so upstream behaviour is
 unchanged; `brandAppSchemePattern(STANDALONE_BRAND)` matches only the three BotDuetDot schemes.
