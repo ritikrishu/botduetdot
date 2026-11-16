@@ -69,10 +69,15 @@ export T3CODE_BRAND=standalone
 node scripts/standalone/check-brand-leaks.ts --source
 node scripts/standalone/release-desktop-mac.ts --version 0.1.9-botduetdot.1 --dry-run
 node scripts/standalone/release-desktop-mac.ts --version 0.1.9-botduetdot.1
+# After checking release/mac/<version>/, publish the same bytes to ritikrishu/botduetdot:
+node scripts/standalone/release-desktop-mac.ts --version 0.1.9-botduetdot.1 --publish --notes-file notes.md
 ```
 
-These T7 scripts are being implemented. Desktop flags above are contract-defined; confirm the
-implementation before running. After rebuilding, run
+`--dry-run` lists missing prerequisites without credentials, building or network access. The build
+needs a clean committed checkout, macOS arm64, Xcode tools, `gh` authentication and a Rust toolchain
+that meets the locked `sysinfo` minimum (1.95.0 worked; set `RUSTUP_TOOLCHAIN` if your default is older).
+Only `--publish` creates a GitHub release, and it requires `--notes-file`. Run `node
+scripts/standalone/release-desktop-mac.ts --help` for the full list. After rebuilding, run
 `node scripts/standalone/check-brand-leaks.ts --bundles` (no path argument). It scans
 `apps/server/dist`, `apps/web/dist` and `apps/desktop/dist-electron`. The `--source` scan is advisory:
 inspect its findings even when it exits successfully.
@@ -92,8 +97,20 @@ export T3CODE_MOBILE_VERSION=0.1.9-botduetdot.1 T3CODE_ANDROID_VERSION_CODE=2026
 export T3CODE_MOBILE_UPDATES_ENABLED=0 EXPO_NO_GIT_STATUS=1 NODE_ENV=production
 ```
 
-**TODO (T7 flags):** insert the engineer-confirmed `release-android.ts` invocation, including version,
-versionCode and dry-run flags if required. Do not bypass it with a raw Gradle build for publication.
+```bash
+node scripts/standalone/release-android.ts --version 0.1.9-botduetdot.1 \
+  --version-code 2026111601 --previous-version-code 0 --dry-run
+node scripts/standalone/release-android.ts --version 0.1.9-botduetdot.1 \
+  --version-code 2026111601 --previous-version-code 0
+```
+
+`--previous-version-code` (or `STANDALONE_ANDROID_PREVIOUS_VERSION_CODE`) is the highest code already
+used on **any** Play track; use `0` for the first upload. The wrapper sets the brand environment above
+itself, needs a clean checkout, JDK 17, the Android SDK, `bundletool`, `keytool` and `jarsigner`, and
+runs the full Gradle task `:app:bundleRelease` (signing is read only for release tasks, so abbreviated
+task names skip it). If you run Metro yourself while testing, start it with the same `T3CODE_BRAND`
+as the native build; a mismatched Metro serves the other brand's JavaScript. Do not bypass the wrapper
+with a raw Gradle build for publication.
 The wrapper must prebuild production Android, build all ABIs, scan the exact AAB, verify its signing
 certificate against `STANDALONE_UPLOAD_CERT_SHA256` (not Android Debug), then stage
 `release/android/BotDuetDot-<version>-<versionCode>.aab` plus `.sha256`.
