@@ -50,6 +50,23 @@ The working contract that drove the standalone build is in git history
   come from resources the standalone plugin overrides, the gate scans `base/dex` and `base/lib`,
   `npx t3@` and "T3 home" are gated, and the managed-policy path comes from the brand.
 
+### Demo environment decisions
+
+The Play review demo server lives in `infra/demo` (fork-only). The only upstream file it touches is
+`apps/server/scripts/dev-replay-agent.ts`.
+
+- **d1:** Connect first, then submit for production. Reviewers sign in with a demo account instead of
+  using single-use pairing codes. Host choice (VPS or Mac Studio VM) is deferred; never an existing
+  Hetzner machine. Phase 1 runs locally with `docker compose -f infra/demo/compose.yaml up`.
+- **d2:** the agent is a scripted Replay recording, not a capped real model: no subscription, no
+  spend, no network, fictional data.
+- **d3:** under a managed policy, `limits.maxRuntimeMode` makes provider launch config
+  administrator-owned, so a `settings.json` `acpRegistry` command is ignored ("Local ACP provider
+  requires an executable"). The demo policy sets no ceiling and uses
+  `defaultRuntimeMode: "approval-required"` in settings so the approval demo asks.
+- **d4:** standalone reads its managed policy from `/etc/botduetdot/policy.json`, not `/etc/t3code`.
+- **d5:** the demo host port is 3780; 3773 collides with a real BotDuetDot server on the same host.
+
 ## Design decisions and known limits
 
 Server settings are the only existing store every client receives; client settings are local
