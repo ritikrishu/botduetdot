@@ -22,6 +22,7 @@ export function demoSettings(input: {
 }): unknown {
   return {
     defaultModelSelection: { instanceId: "demo", model: "code-change" },
+    defaultRuntimeMode: "approval-required",
     providerInstances: {
       demo: {
         displayName: "Demo agent",
