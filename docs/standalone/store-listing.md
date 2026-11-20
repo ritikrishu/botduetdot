@@ -34,7 +34,7 @@ personal paths, and avoid screens with residual T3 copy or marks. Show only avai
 ## App access: complete before review
 
 Declare that core functionality requires a connection to a server. Reviewer access is planned through
-BotDuetDot Connect (phase 2, not built yet), so production review waits for Connect. There are no
+BotDuetDot Connect (not built yet), so production review waits until Connect exists. There are no
 single-use pairing codes. **OWNER DECISION** until then: a demo video alone does not guarantee review
 access, so do not submit for production before Connect works.
 
@@ -47,9 +47,11 @@ Reviewers need nothing paid. Console text, with real values filled in only in Co
 4. Switch between the Spaces "Work" and "Side projects".
 5. Start a thread with "Approval demo" and approve or deny the request; try "Question demo" too.
 6. Sign out and repeat to verify access.
+7. To test account deletion, create your own account first; do not delete the shared demo account.
 
-Verification codes for the demo account go to `<monitored email>`. Keep the demo server available
-throughout review, and put network requirements and a monitored contact in Console. Never commit
+The demo account must sign in with email and password alone: no MFA and no email or new-device
+verification codes, because reviewers cannot receive them. Keep the demo server available throughout
+review, and put network requirements and a contact reviewers can write to (`<monitored email>`) in Console. Never commit
 credentials here.
 
 Complete [Data safety](data-safety.md), ads (no), audience (proposed 18+), content rating and

@@ -57,7 +57,7 @@ The Play review demo server lives in `infra/demo` (fork-only). The only upstream
 
 - **d1:** Connect first, then submit for production. Reviewers sign in with a demo account instead of
   using single-use pairing codes. Host choice (VPS or Mac Studio VM) is deferred; never an existing
-  Hetzner machine. Phase 1 runs locally with `docker compose -f infra/demo/compose.yaml up`.
+  Hetzner machine. Until Connect exists, run it locally ([`infra/demo/README.md`](infra/demo/README.md)).
 - **d2:** the agent is a scripted Replay recording, not a capped real model: no subscription, no
   spend, no network, fictional data.
 - **d3:** under a managed policy, `limits.maxRuntimeMode` makes provider launch config
