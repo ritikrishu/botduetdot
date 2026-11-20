@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "organization": "BotDuetDot Demo",
+  "limits": {
+    "maxRuntimeMode": "approval-required",
+    "providers": { "allowedDrivers": ["acpRegistry"] },
+    "browserCookieImport": false,
+    "webhookTasks": false,
+    "telemetry": false
+  }
+}

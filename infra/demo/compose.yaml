@@ -1,0 +1,35 @@
+services:
+  demo:
+    image: botduetdot-demo
+    build:
+      context: ../..
+      dockerfile: infra/demo/Dockerfile
+    read_only: true
+    tmpfs:
+      - /tmp
+    volumes:
+      - demo-home:/data
+    ports:
+      - "3773:3773"
+    mem_limit: 1g
+    pids_limit: 256
+    cpus: 1
+    restart: unless-stopped
+    user: "10001"
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3773/').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+volumes:
+  demo-home:
