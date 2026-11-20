@@ -63,6 +63,17 @@ describe("bundle-time brand text", () => {
     );
   });
 
+  it("renames the bare short name only in app-name copy", () => {
+    const copy =
+      'a("Open T3 to connect"); b(stale ? "Open T3 to refresh" : "Open T3"); c(`${n} more in T3`); d(<p>Tap to connect in T3</p>); e("Restart the T3 server. Run T3 as a nonroot user.");';
+    expect(rewriteBrandText(copy, STANDALONE_BRAND)).toBe(
+      'a("Open BotDuetDot to connect"); b(stale ? "Open BotDuetDot to refresh" : "Open BotDuetDot"); c(`${n} more in BotDuetDot`); d(<p>Tap to connect in BotDuetDot</p>); e("Restart the BotDuetDot server. Run BotDuetDot as a nonroot user.");',
+    );
+    const kept =
+      '"Open T3 Account"; "T3 Connect"; "T3\'s browser"; "T3-Mode-Limit"; "in T3Code"; /Unable to connect to the T3 server WebSocket\\./i; "a T3 thread"';
+    expect(rewriteBrandText(kept, STANDALONE_BRAND)).toBe(kept);
+  });
+
   it("renames T3 home and t3@ version labels but not npm commands", () => {
     const copy =
       "a(`Use a separate T3 home.`); b(`Reconnected on t3@${v}.`); c(`t3@${v} is a preview build.`);";

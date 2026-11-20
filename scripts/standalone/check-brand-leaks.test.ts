@@ -87,6 +87,9 @@ describe("artifact leak rules", () => {
     'children:"Scan the code from t3 pair or desktop Connections settings"',
     '{command:"t3 connect link"}',
     'label:"t3 thread cli"',
+    'detail:"Open T3 to connect"',
+    "`${n} more in T3`",
+    '"Restart the T3 server if browser tabs were already open."',
   ])("rejects %s", (text) => {
     expect(scanText(js(text), []).length).toBeGreaterThan(0);
   });
@@ -94,7 +97,7 @@ describe("artifact leak rules", () => {
     expect(
       scanText(
         js(
-          '"t3code:theme"; "t3code-preview-session"; "--t3code-preview-passkey-bridge"; "npx t3 triage"; "botduetdot pair"; "t3 checkpoint"; var t3 = up; "@t3tools/t3 update"',
+          '"t3code:theme"; "t3code-preview-session"; "--t3code-preview-passkey-bridge"; "npx t3 triage"; "botduetdot pair"; "t3 checkpoint"; var t3 = up; "@t3tools/t3 update"; "Open T3 Account"; "T3 Connect"; /Unable to connect to the T3 server WebSocket\\./i',
         ),
         [],
       ),

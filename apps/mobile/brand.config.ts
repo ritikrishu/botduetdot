@@ -98,7 +98,20 @@ export function applyMobileBrand(
       case "@clerk/expo":
         return [name, { ...options, appleSignIn: false }];
       case "expo-widgets":
-        return [name, { ...options, enablePushNotifications: false }];
+        return [
+          name,
+          {
+            ...options,
+            enablePushNotifications: false,
+            // expo-widgets bundles embedded layouts with its own Metro config, outside the brand-text
+            // transform. Standalone widgets show the default layout until the app first publishes.
+            widgets: options.widgets?.map((widget: { android?: object | null }) =>
+              widget.android
+                ? { ...widget, android: { ...widget.android, initialLayout: undefined } }
+                : widget,
+            ),
+          },
+        ];
       case "expo-quick-actions":
         return [
           name,

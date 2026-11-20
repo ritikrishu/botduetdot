@@ -62,7 +62,14 @@ function fixture(): ExpoConfig {
     plugins: [
       [
         "expo-widgets",
-        { bundleIdentifier: "com.t3tools.t3code.widgets", enablePushNotifications: true },
+        {
+          bundleIdentifier: "com.t3tools.t3code.widgets",
+          enablePushNotifications: true,
+          widgets: [
+            { name: "A", android: { initialLayout: "./a.android.tsx", minWidth: 250 } },
+            { name: "B", android: null, ios: { initialLayout: "./b.tsx" } },
+          ],
+        },
       ],
     ],
   };
@@ -88,6 +95,13 @@ it.each(["development", "preview", "production"] as const)(
       "com.google.android.c2dm.permission.RECEIVE",
     );
     expect(JSON.stringify(result)).not.toMatch(/t3code|t3tools|t3\.codes|u\.expo\.dev|d763fcb8/);
+    const [, { widgets }] = result.plugins!.find(
+      (plugin) => Array.isArray(plugin) && plugin[0] === "expo-widgets",
+    ) as [string, { widgets: object[] }];
+    expect(JSON.parse(JSON.stringify(widgets))).toEqual([
+      { name: "A", android: { minWidth: 250 } },
+      { name: "B", android: null, ios: { initialLayout: "./b.tsx" } },
+    ]);
     expect(original.updates?.enabled).toBe(true);
   },
 );

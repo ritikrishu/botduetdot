@@ -133,7 +133,7 @@ with a raw Gradle build for publication.
 The wrapper prebuilds production Android, builds all ABIs, then exports the same Metro entry as
 JavaScript with `expo export --platform android --no-bytecode` in a private temporary directory using
 the same release environment. The JS scan checks forbidden patterns, leftover `t3 <subcommand>` CLI
-copy, constructed upstream schemes and the exact count of internal `"t3code"` literals. Hermes still checks every forbidden pattern in ASCII
+and short-name ("Open T3") copy, constructed upstream schemes and the exact count of internal `"t3code"` literals. Hermes still checks every forbidden pattern in ASCII
 and UTF-16, with exact counted attribution and shared-schema exemptions. Hermes string-table adjacency
 is not JavaScript syntax, so bare-token and constructed-scheme checks belong to the JS scan.
 Both bundles must pass the same release gate, along with AAB manifest/config checks and signing

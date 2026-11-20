@@ -38,17 +38,23 @@ const CLI_SUBCOMMANDS =
 // A launcher invocation in copy (`t3 pair` in JSX text, labels, help): never part of a longer word or
 // path, and never an npm command (`npx t3 …` resolves the upstream package).
 export const CLI_COPY_SOURCE = `(?<![\\w$@./-]|npx )t3(?= (?:${CLI_SUBCOMMANDS})\\b)`;
+// The bare short name in app-name copy: "Open T3 to connect", "3 more in T3", "the T3 server",
+// "Run T3 as …". T3 Connect and its "T3 Account" stay, as do other uses of "T3" and the
+// transport-error pattern for older servers' "T3 server WebSocket" message.
+export const SHORT_NAME_COPY_SOURCE =
+  "\\bT3(?= server\\b(?! WebSocket))|(?<=\\bRun )T3(?= as\\b)|(?<=\\bOpen )T3\\b(?! Account| Connect| Code)|(?<=\\bin )T3(?=[\"'`<\\n]|$)";
 // "T3 Code" and "T3 home" contain a space, so they are never identifiers. The CLI name changes only
 // in `t3 <subcommand>` copy, a quoted `t3` and `t3@${version}` labels, never in other text (the git
 // message `t3 checkpoint …`) or npm commands (`npx t3@`, `install t3@`, `${runner} t3@`).
 const BRAND_TEXT_PATTERN = new RegExp(
-  `T3 Code|T3 home|(?<=\`)t3(?=\`)|${CLI_COPY_SOURCE}|(?<!\\} |npx |install )\\bt3@(?=\\$\\{)`,
+  `T3 Code|T3 home|${SHORT_NAME_COPY_SOURCE}|(?<=\`)t3(?=\`)|${CLI_COPY_SOURCE}|(?<!\\} |npx |install )\\bt3@(?=\\$\\{)`,
   "g",
 );
 
 function replacementFor(match: string, brand: BrandProfile): string {
   if (match === "T3 Code") return brand.name;
   if (match === "T3 home") return `${brand.name} home`;
+  if (match === "T3") return brand.name;
   return match === "t3@" ? `${brand.cliName}@` : brand.cliName;
 }
 
