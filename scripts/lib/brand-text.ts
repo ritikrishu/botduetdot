@@ -35,11 +35,14 @@ export function isBrandTextSource(id: string, root = repoRoot): boolean {
 // Subcommands of the CLI whose launcher standalone installs as BRAND.cliName.
 const CLI_SUBCOMMANDS =
   "app|auth|browser|config|connect|doctor|down|environment|install|pair|policy|project|serve|service|status|theme|thread|trace|triage|uninstall|up|update";
+// A launcher invocation in copy (`t3 pair` in JSX text, labels, help): never part of a longer word or
+// path, and never an npm command (`npx t3 …` resolves the upstream package).
+export const CLI_COPY_SOURCE = `(?<![\\w$@./-]|npx )t3(?= (?:${CLI_SUBCOMMANDS})\\b)`;
 // "T3 Code" and "T3 home" contain a space, so they are never identifiers. The CLI name changes only
-// in quoted `t3`/`t3 <subcommand>` copy and `t3@${version}` labels, never in other template text
-// (the git message `t3 checkpoint …`) or npm commands (`npx t3@`, `install t3@`, `${runner} t3@`).
+// in `t3 <subcommand>` copy, a quoted `t3` and `t3@${version}` labels, never in other text (the git
+// message `t3 checkpoint …`) or npm commands (`npx t3@`, `install t3@`, `${runner} t3@`).
 const BRAND_TEXT_PATTERN = new RegExp(
-  `T3 Code|T3 home|(?<=\`)t3(?=\`| (?:${CLI_SUBCOMMANDS})\\b)|(?<!\\} |npx |install )\\bt3@(?=\\$\\{)`,
+  `T3 Code|T3 home|(?<=\`)t3(?=\`)|${CLI_COPY_SOURCE}|(?<!\\} |npx |install )\\bt3@(?=\\$\\{)`,
   "g",
 );
 

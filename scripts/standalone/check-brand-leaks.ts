@@ -21,6 +21,7 @@ import {
   DERIVED_CACHE_SCOPE,
   FORBIDDEN_ENTITLEMENTS,
   FORBIDDEN_PATTERNS,
+  JS_FORBIDDEN_PATTERNS,
   HERMES_COUNTED_EXEMPTIONS,
   RELEASE_IDENTITY,
   validateVersion,
@@ -156,6 +157,7 @@ export function scanText(
   };
   for (const [rule, pattern] of FORBIDDEN_PATTERNS) addMatches(rule, pattern);
   if (file.javascript) {
+    for (const [rule, pattern] of JS_FORBIDDEN_PATTERNS) addMatches(rule, pattern);
     for (const expression of normalized.text.matchAll(
       /(?:["'`][^"'`\n]*["'`]\s*\+\s*)+["'`][^"'`\n]*["'`]/g,
     )) {

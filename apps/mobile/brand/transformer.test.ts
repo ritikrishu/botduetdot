@@ -50,9 +50,10 @@ it("rewrites Metro strings, templates, regexes and JSX while preserving source p
   };
   const transformer = createBrandTransformer(delegate, STANDALONE_BRAND);
   const src =
-    'const label = "T3 Code"; const next = 1;\nconst prompt = `T3 Code ${next}`;\nconst jsx = <p title="T3 Code">T3 Code</p>;\nconst re = /T3 Code/;';
+    'const label = "T3 Code"; const next = 1;\nconst prompt = `T3 Code ${next}`;\nconst jsx = <p title="T3 Code">T3 Code</p>;\nconst re = /T3 Code/;\nconst pair = <p>Scan the code from t3 pair</p>;';
   const result = transformer.transform({ ...args, src });
   expect(result.code).not.toContain("T3 Code");
+  expect(result.code).toContain("Scan the code from botduetdot pair");
   expect(result.code.match(/BotDuetDot/g)).toHaveLength(5);
   const lines = result.code.split("\n");
   const line = lines.findIndex((text) => text.includes("const next"));

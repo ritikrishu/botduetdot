@@ -45,10 +45,16 @@ describe("bundle-time brand text", () => {
     expect(rewriteBrandText(copy, STANDALONE_BRAND)).toBe(
       'm("Run `botduetdot service install`; the `botduetdot` launcher"); n(`Run \\`botduetdot update --channel x\\`.`);',
     );
+    const unquoted =
+      '<Text>Scan the code from t3 pair or desktop settings</Text>; label: "t3 thread cli"; "0 t3 serve"';
+    expect(rewriteBrandText(unquoted, STANDALONE_BRAND)).toBe(
+      '<Text>Scan the code from botduetdot pair or desktop settings</Text>; label: "botduetdot thread cli"; "0 botduetdot serve"',
+    );
     for (const kept of [
       "const message = `t3 checkpoint ref=${ref}`;",
       "log(`t3 and its background service are current`);",
       'x("`t3 uploads`"); const t3 = 1; "t3code.preferences"; `${t3} service`;',
+      '"npx t3 triage"; "sudo npx t3 browser setup"; "x/t3 up"; "@t3 pair"; "a.t3 status"; "ut3 up"',
     ])
       expect(rewriteBrandText(kept, STANDALONE_BRAND)).toBe(kept);
     expect(rewriteBrandText(copy, UPSTREAM_BRAND)).toBe(copy);
