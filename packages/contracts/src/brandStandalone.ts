@@ -65,6 +65,7 @@ export function defineStandaloneBrand(): BrandProfile {
       description: `${name} is an open-source desktop app for coding agents. Work with your existing agent subscriptions, review code changes, and run commands in your projects. Connect from desktop, web, or mobile to continue working remotely.`,
       aboutCredits: "Based on T3 Code © 2026 T3 Tools Inc. (MIT License)",
       assetDir: "assets/brand/standalone",
+      stageInName: false,
     },
     service: {
       launchdLabel: `${reverseDns}.service`,

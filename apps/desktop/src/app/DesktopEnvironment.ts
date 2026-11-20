@@ -107,8 +107,22 @@ export function resolveDesktopAppBranding(input: {
   return {
     baseName: APP_BASE_NAME,
     stageLabel,
-    displayName: `${APP_BASE_NAME} (${stageLabel})`,
+    displayName: showsDesktopStageInName(stageLabel)
+      ? `${APP_BASE_NAME} (${stageLabel})`
+      : APP_BASE_NAME,
   };
+}
+
+/** Development builds always carry "Dev"; release builds follow `BRAND.desktop.stageInName`. */
+function showsDesktopStageInName(stageLabel: DesktopAppStageLabel): boolean {
+  return stageLabel === "Dev" || BRAND.desktop.stageInName;
+}
+
+/** Electron runtime name; it also names the macOS "<name> Safe Storage" Keychain item. */
+export function resolveDesktopRuntimeName(branding: DesktopAppBranding): string {
+  return showsDesktopStageInName(branding.stageLabel)
+    ? `${branding.baseName} ${branding.stageLabel}`
+    : branding.baseName;
 }
 
 function normalizeDesktopArch(arch: string): DesktopRuntimeArch {

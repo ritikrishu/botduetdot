@@ -53,8 +53,8 @@ Do not use the older preview/debug-signed APK procedure in FORK.md for Play.
    linked legal routes publicly before Play submission.
 6. Approve the app name/artwork, [store listing](store-listing.md), [Data safety](data-safety.md) and
    public policies. Supply the Play contact email, reviewer access and account type/creation date.
-   Decide the lifetime macOS runtime name before first release: changing **BotDuetDot Beta** later
-   can orphan the **BotDuetDot Beta Safe Storage** Keychain item.
+   The lifetime macOS runtime name is **BotDuetDot** (`desktop.stageInName: false`, decided
+   2026-11-20). Never change it: a rename orphans the **BotDuetDot Safe Storage** Keychain item.
 
 ## Version policy
 

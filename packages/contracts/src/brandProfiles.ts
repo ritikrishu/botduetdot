@@ -61,6 +61,12 @@ export interface BrandProfile {
     readonly description: string;
     readonly aboutCredits: string | null;
     readonly assetDir: string | null;
+    /**
+     * Whether release builds append the stage ("Beta", "Nightly") to the runtime name. The runtime
+     * name also names the macOS "<name> Safe Storage" Keychain item, so it must never change after
+     * a release. Development builds always show "Dev".
+     */
+    readonly stageInName: boolean;
   };
   readonly service: { readonly launchdLabel: string; readonly systemdUnitName: string };
   readonly managedPolicy: {
@@ -150,6 +156,7 @@ function defineUpstreamBrand(): BrandProfile {
         "T3 Code is an open-source desktop app for coding agents. Work with your existing agent subscriptions, review code changes, and run commands in your projects. Connect from desktop, web, or mobile to continue working remotely.",
       aboutCredits: null,
       assetDir: null,
+      stageInName: true,
     },
     service: {
       launchdLabel: "com.t3tools.t3code.service",
