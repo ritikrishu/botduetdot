@@ -98,3 +98,37 @@ export function tick(garden: Cell[][]): Cell[][] {
 `,
   },
 };
+
+export const DEMO_THREADS: ReadonlyArray<{
+  repo: keyof typeof DEMO_REPOS;
+  title: string;
+  model: "code-change" | "question";
+  messages: ReadonlyArray<string>;
+}> = [
+  {
+    repo: "acme-weather",
+    title: "Add a Fahrenheit helper",
+    model: "code-change",
+    messages: [
+      "Add a helper that converts a forecast's average temperature to Fahrenheit, with a test.",
+      "Looks good. Can you double check the rounding?",
+    ],
+  },
+  {
+    repo: "notes-cli",
+    title: "Plan the search feature",
+    model: "code-change",
+    messages: ["Sketch how we could add a search command to the notes CLI."],
+  },
+  {
+    repo: "pixel-garden",
+    title: "Ask about units",
+    model: "question",
+    messages: ["Which units should the garden use for its grid size?"],
+  },
+];
+
+export const DEMO_SPACES = [
+  { id: "work", name: "Work", icon: "briefcase", repos: ["acme-weather", "notes-cli"] },
+  { id: "side", name: "Side projects", icon: "sparkles", repos: ["pixel-garden"] },
+] as const;

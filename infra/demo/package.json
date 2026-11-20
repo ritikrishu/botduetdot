@@ -1,0 +1,9 @@
+{
+  "name": "@t3tools/demo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@t3tools/contracts": "workspace:*",
+    "effect": "catalog:"
+  }
+}
