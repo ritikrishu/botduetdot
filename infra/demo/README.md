@@ -3,8 +3,8 @@
 A sandboxed T3 Code server with seeded demo projects and scripted (replayed) agents, for store review.
 
 - Build: `docker compose -f infra/demo/compose.yaml build`
-- Run: `docker compose -f infra/demo/compose.yaml up -d` (port 3773)
-- Pair: `docker compose -f infra/demo/compose.yaml exec demo node /opt/app/dist/bin.mjs pair --base-dir /data`
+- Run: `docker compose -f infra/demo/compose.yaml up -d` (host port 3780, override with `DEMO_PORT`; 3773 is left free for a local BotDuetDot)
+- Pair: `docker compose -f infra/demo/compose.yaml exec demo node /opt/app/dist/bin.mjs pair --base-dir /data`, then connect to `http://<host>:3780`
 - Reset to the golden home: `infra/demo/reset.sh`
 
 Threat model:
