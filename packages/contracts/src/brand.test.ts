@@ -102,6 +102,7 @@ describe("brand profiles", () => {
         // apps/desktop/src/app/DesktopAppIdentity.ts:98-102 (no credits); scripts/lib/brand-assets.ts:1-38
         aboutCredits: null,
         assetDir: null,
+        stageInName: true,
       },
       // apps/server/src/cloud/bootService.ts:38-42
       service: {
@@ -191,12 +192,13 @@ describe("brand profiles", () => {
         appUserModelId: "com.ritikrishu.botduetdot",
         devAppUserModelId: "com.ritikrishu.botduetdot.dev",
         macPasskeys: false,
-        author: "ritikrishu",
+        author: "RemoteX Services LLP",
         homepage: "https://ritikrishu.github.io/botduetdot/",
         description:
           "BotDuetDot is an open-source desktop app for coding agents. Work with your existing agent subscriptions, review code changes, and run commands in your projects. Connect from desktop, web, or mobile to continue working remotely.",
         aboutCredits: "Based on T3 Code © 2026 T3 Tools Inc. (MIT License)",
         assetDir: "assets/brand/standalone",
+        stageInName: false,
       },
       service: {
         launchdLabel: "com.ritikrishu.botduetdot.service",

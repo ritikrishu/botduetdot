@@ -80,7 +80,7 @@ it("forces the standalone feed and identity while preserving macOS permissions a
     productName: "BotDuetDot",
     description: STANDALONE_BRAND.desktop.description,
     homepage: "https://ritikrishu.github.io/botduetdot/",
-    author: "ritikrishu",
+    author: "RemoteX Services LLP",
   });
 });
 

@@ -7,7 +7,9 @@ export function defineStandaloneBrand(): BrandProfile {
   const repository = "ritikrishu/botduetdot";
   const siteUrl = "https://ritikrishu.github.io/botduetdot/";
   const hostedAppUrl = "https://app.botduetdot.invalid";
-  const author = "ritikrishu";
+  const author = "RemoteX Services LLP";
+  // Registry vendor key; kept free of spaces and independent of the publisher name.
+  const policyVendor = "ritikrishu";
 
   const repositoryUrl = `https://github.com/${repository}`;
   const androidStore = `https://play.google.com/store/apps/details?id=${reverseDns}`;
@@ -73,7 +75,7 @@ export function defineStandaloneBrand(): BrandProfile {
     },
     managedPolicy: {
       macDomain: reverseDns,
-      windowsSubkey: `SOFTWARE\\Policies\\${author}\\${name}`,
+      windowsSubkey: `SOFTWARE\\Policies\\${policyVendor}\\${name}`,
       fileDirName: name,
       linuxDirName: slug,
     },
