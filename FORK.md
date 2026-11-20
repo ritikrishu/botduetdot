@@ -51,6 +51,10 @@ The working contract that drove the standalone build is in git history
   `npx t3@` and "T3 home" are gated, and the managed-policy path comes from the brand.
 - **r12:** the rewrite also covers unquoted `t3 <subcommand>` copy (JSX text, labels, CLI help) but
   never `npx t3 …`; the JS gate fails on any `t3 <subcommand>` it left behind (`upstream-cli`).
+- **r13:** the bare "T3" is rewritten only in app-name phrases ("Open T3", "… in T3", "T3 server",
+  "Run T3 as"), gated as `upstream-short-name`. Other bare "T3" copy, much of it model-facing MCP
+  text, is unreviewed. Standalone Android widgets drop their embedded layout, which expo-widgets
+  bundles outside the rewrite, and the AAB gate scans `base/res/raw`.
 
 ## Design decisions and known limits
 
@@ -117,7 +121,7 @@ and `apps/mobile/src/features/home/spaces/`, with tests beside it and
 ### Standalone seams
 
 Derived from `git diff --stat v0.1.9..HEAD`, excluding new files; unabridged names come from
-`git diff --name-only --diff-filter=MDRT v0.1.9..HEAD`. Cross-checked against the working contract's seams S1–S57 and the decision log below (r3–r12).
+`git diff --name-only --diff-filter=MDRT v0.1.9..HEAD`. Cross-checked against the working contract's seams S1–S57 and the decision log below (r3–r13).
 Standalone builds also rewrite "T3 Code" and `t3` CLI copy at bundle time
 (`scripts/lib/brand-text.ts`), so most upstream copy needs no seam. The Spaces table above remains
 part of this inventory. Refresh both tables after integration and each upgrade.

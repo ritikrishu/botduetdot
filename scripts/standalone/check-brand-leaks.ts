@@ -836,9 +836,9 @@ export function checkAndroidAab(
       ["dump", "resources", `--bundle=${aab}`, "--resource=string/app_name", "--values"],
       { env },
     );
-    // Compiled Kotlin/Java (dex) and native libraries are not reached by the bundle-time rewrite,
-    // so their strings are scanned too.
-    const files = ["base/assets", "base/root", "base/dex"].flatMap((directory) =>
+    // Compiled Kotlin/Java (dex), native libraries and raw resources (expo-widgets bundles widget
+    // layouts with its own Metro config) are not reached by the bundle-time rewrite.
+    const files = ["base/assets", "base/root", "base/dex", "base/res/raw"].flatMap((directory) =>
       NodeFS.existsSync(NodePath.join(temporary, directory))
         ? scanFiles(
             NodePath.join(temporary, directory),
