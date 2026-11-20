@@ -1,0 +1,17 @@
+[
+  {
+    "id": "code-change",
+    "name": "Code change demo",
+    "file": "code-change.ndjson"
+  },
+  {
+    "id": "approval",
+    "name": "Approval demo",
+    "file": "approval.ndjson"
+  },
+  {
+    "id": "question",
+    "name": "Question demo",
+    "file": "question.ndjson"
+  }
+]
