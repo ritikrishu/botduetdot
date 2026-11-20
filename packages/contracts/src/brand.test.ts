@@ -168,8 +168,8 @@ describe("brand profiles", () => {
       analytics: { enabledByDefault: false, posthogHost: "", posthogKey: "" },
       modelManifestUrl: null,
       links: {
-        marketingSite: "https://ritikrishu.github.io/botduetdot/",
-        privacyPolicy: "https://ritikrishu.github.io/botduetdot/privacy-policy",
+        marketingSite: "https://www.ritikrishu.com/projects/botduetdot/",
+        privacyPolicy: "https://www.ritikrishu.com/projects/botduetdot/privacy-policy",
         download: "https://github.com/ritikrishu/botduetdot/releases/latest",
         mobileApp: "https://play.google.com/store/apps/details?id=com.ritikrishu.botduetdot",
         androidStore: "https://play.google.com/store/apps/details?id=com.ritikrishu.botduetdot",
@@ -193,7 +193,7 @@ describe("brand profiles", () => {
         devAppUserModelId: "com.ritikrishu.botduetdot.dev",
         macPasskeys: false,
         author: "RemoteX Services LLP",
-        homepage: "https://ritikrishu.github.io/botduetdot/",
+        homepage: "https://www.ritikrishu.com/projects/botduetdot/",
         description:
           "BotDuetDot is an open-source desktop app for coding agents. Work with your existing agent subscriptions, review code changes, and run commands in your projects. Connect from desktop, web, or mobile to continue working remotely.",
         aboutCredits: "Based on T3 Code © 2026 T3 Tools Inc. (MIT License)",

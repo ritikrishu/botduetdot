@@ -408,7 +408,7 @@ describe("structural identity gates", () => {
     const manifest = {
       name: "botduetdot",
       productName: "BotDuetDot",
-      homepage: "https://ritikrishu.github.io/botduetdot/",
+      homepage: "https://www.ritikrishu.com/projects/botduetdot/",
       version: "0.1.9-botduetdot.1",
     };
     expect(checkPackage(JSON.stringify(manifest), "package.json", manifest.version)).toEqual([]);

@@ -3,7 +3,7 @@ export const RELEASE_IDENTITY = {
   slug: "botduetdot",
   appId: "com.ritikrishu.botduetdot",
   repository: "ritikrishu/botduetdot",
-  homepage: "https://ritikrishu.github.io/botduetdot/",
+  homepage: "https://www.ritikrishu.com/projects/botduetdot/",
 } as const;
 
 export function validateVersion(value: string): string {

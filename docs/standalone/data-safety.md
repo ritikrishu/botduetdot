@@ -66,5 +66,5 @@ Separately, operators can configure OpenTelemetry export endpoints in
 These exports can send logs, traces and metrics to the chosen collector. Review their payload and
 retention before enabling them; the default “analytics off” statement is not a ban on configured exports.
 
-Public policy: https://ritikrishu.github.io/botduetdot/privacy-policy. Owner approval of declarations
+Public policy: https://www.ritikrishu.com/projects/botduetdot/privacy-policy. Owner approval of declarations
 is required before submission, including any new data handled by the review demo server.

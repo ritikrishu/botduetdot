@@ -43,7 +43,8 @@ Do not use the older preview/debug-signed APK procedure in FORK.md for Play.
    submissions. Never substitute the Android debug key.
 
 4. Keep the GitHub repository public for unauthenticated updates. Enable Issues and set the homepage
-   to https://ritikrishu.github.io/botduetdot/. Set the checkout's GitHub default to
+   to https://www.ritikrishu.com/projects/botduetdot/ (ritikrishu.com proxies the GitHub Pages copy at
+   https://ritikrishu.github.io/botduetdot/). Set the checkout's GitHub default to
    `ritikrishu/botduetdot`; still pass `--repo ritikrishu/botduetdot` to release commands. Disable inherited
    upstream release workflows before enabling automation. Local release wrappers need no Actions.
 5. Publish only [site/](site/) through GitHub Pages, not all of `/docs`. It contains plain HTML and

@@ -5,7 +5,7 @@ export function defineStandaloneBrand(): BrandProfile {
   const slug = "botduetdot";
   const reverseDns = "com.ritikrishu.botduetdot";
   const repository = "ritikrishu/botduetdot";
-  const siteUrl = "https://ritikrishu.github.io/botduetdot/";
+  const siteUrl = "https://www.ritikrishu.com/projects/botduetdot/";
   const hostedAppUrl = "https://app.botduetdot.invalid";
   const author = "RemoteX Services LLP";
   // Registry vendor key; kept free of spaces and independent of the publisher name.

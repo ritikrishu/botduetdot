@@ -5,10 +5,10 @@
 - App name: **BotDuetDot**
 - Short description: **Control your self-hosted coding agents from your phone.**
 - Category: **Productivity** (app).
-- Website: https://ritikrishu.github.io/botduetdot/
-- Privacy: https://ritikrishu.github.io/botduetdot/privacy-policy
+- Website: https://www.ritikrishu.com/projects/botduetdot/
+- Privacy: https://www.ritikrishu.com/projects/botduetdot/privacy-policy
 - Support: https://github.com/ritikrishu/botduetdot/issues
-- Contact email: **OWNER DECISION — supply a monitored address before submission.** Issues does not replace Play's email field.
+- Contact email: **hi@remotestate.com** (decided 2026-11-20; change any time in Play Console → Store settings).
 
 ### Full description
 
