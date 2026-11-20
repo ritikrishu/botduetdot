@@ -26,7 +26,7 @@ const { server, agent, recordings, out } = Object.fromEntries(
 
 const userdata = NodePath.join(out, "userdata");
 const settingsPath = NodePath.join(userdata, "settings.json");
-const author = ["-c", "user.name=Demo Author", "-c", "user.email=demo@example.invalid"];
+const author = ["-c", "user.name=Demo", "-c", "user.email=demo@example.invalid"];
 
 const git = (cwd: string, args: ReadonlyArray<string>) =>
   NodeChildProcess.execFileSync("git", [...author, ...args], { cwd, stdio: "pipe" });
@@ -125,8 +125,13 @@ const child = NodeChildProcess.spawn(
   { stdio: "ignore" },
 );
 let exited = false;
-child.once("exit", () => {
-  exited = true;
+const stopped = new Promise<void>((resolve) => {
+  const done = () => {
+    exited = true;
+    resolve();
+  };
+  child.once("exit", done);
+  child.once("error", done);
 });
 
 try {
@@ -160,7 +165,9 @@ try {
 } finally {
   if (!exited) {
     child.kill("SIGTERM");
-    await new Promise((resolve) => child.once("exit", resolve));
+    const forceKill = setTimeout(() => child.kill("SIGKILL"), 10_000);
+    await stopped;
+    clearTimeout(forceKill);
   }
 }
 
