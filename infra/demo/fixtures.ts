@@ -115,16 +115,10 @@ export const DEMO_THREADS: ReadonlyArray<{
     ],
   },
   {
-    repo: "notes-cli",
-    title: "Plan the search feature",
-    model: "code-change",
-    messages: ["Sketch how we could add a search command to the notes CLI."],
-  },
-  {
-    repo: "pixel-garden",
-    title: "Ask about units",
+    repo: "acme-weather",
+    title: "Choose forecast units",
     model: "question",
-    messages: ["Which units should the garden use for its grid size?"],
+    messages: ["Which units should the forecast show?"],
   },
 ];
 

@@ -17,3 +17,9 @@ release
 *.key
 **/*.pem
 **/*.key
+.npmrc
+**/.npmrc
+*.p12
+**/*.p12
+*.pfx
+**/*.pfx

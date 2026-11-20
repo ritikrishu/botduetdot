@@ -190,6 +190,41 @@ describe("dev replay agent", () => {
     expect(plain.read()).toBe(diff.oldText);
   });
 
+  it("refuses diffs that reach outside the workspace through symlinks", async () => {
+    const outside = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "replay-outside-"));
+    const secret = NodePath.join(outside, "secret.ts");
+    NodeFS.writeFileSync(secret, "untouched");
+    const diffTo = (path: string) =>
+      update({
+        sessionUpdate: "tool_call_update",
+        toolCallId: "e",
+        status: "completed",
+        content: [{ type: "diff", path, oldText: "", newText: "pwned" }],
+      });
+    const transcript = [
+      frame("expect_outbound", { kind: "request", method: "session/prompt", params: "<any>" }),
+      diffTo("<workspace>/src/math.ts"),
+      diffTo("<workspace>/linked/secret.ts"),
+      diffTo("<workspace>/linked/deeper/new.ts"),
+      frame("emit_inbound", {
+        kind: "response",
+        method: "session/prompt",
+        result: { stopReason: "end_turn" },
+      }),
+    ].join("\n");
+    const ws = seedWorkspace(transcript);
+    NodeFS.rmSync(NodePath.join(ws.dir, "src", "math.ts"));
+    NodeFS.symlinkSync(secret, NodePath.join(ws.dir, "src", "math.ts"));
+    NodeFS.symlinkSync(outside, NodePath.join(ws.dir, "linked"));
+    await talkToAgent(newSessionAndPrompts(ws.dir, 1), undefined, [
+      "--apply-diffs",
+      "--scenarios",
+      ws.scenarios!,
+    ]);
+    expect(NodeFS.readFileSync(secret, "utf8")).toBe("untouched");
+    expect(NodeFS.existsSync(NodePath.join(outside, "deeper"))).toBe(false);
+  });
+
   it("writes the edit only when the approval is allowed", async () => {
     const rejected = seedWorkspace(approvalTranscript);
     const flags = (scenarios: string) => ["--apply-diffs", "--scenarios", scenarios];

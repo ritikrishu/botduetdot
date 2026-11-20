@@ -125,6 +125,20 @@ export function diffWrites(
   });
 }
 
+/** Lexical containment is not enough: a symlinked file or parent directory can point outside. */
+export function isSafeWriteTarget(workspace: string, target: string): boolean {
+  try {
+    const root = NodeFS.realpathSync(workspace);
+    let ancestor = NodePath.dirname(NodePath.resolve(target));
+    while (!NodeFS.existsSync(ancestor)) ancestor = NodePath.dirname(ancestor);
+    const relative = NodePath.relative(root, NodeFS.realpathSync(ancestor));
+    if (relative.startsWith("..") || NodePath.isAbsolute(relative)) return false;
+    return !NodeFS.lstatSync(target, { throwIfNoEntry: false })?.isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
 // Session setup and vendor state stay out: they would replace the replay agent's own models.
 const REPLAYED_UPDATES = new Set([
   "agent_message_chunk",
@@ -327,6 +341,7 @@ function runAgent(options: AgentOptions): void {
         });
         if (options.applyDiffs && index === chunks.length - 1) {
           for (const write of diffWrites(params.update, session.cwd)) {
+            if (!isSafeWriteTarget(session.cwd, write.path)) continue;
             NodeFS.mkdirSync(NodePath.dirname(write.path), { recursive: true });
             NodeFS.writeFileSync(write.path, write.text);
           }

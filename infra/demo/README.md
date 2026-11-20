@@ -9,7 +9,7 @@ A sandboxed T3 Code server with seeded demo projects and scripted (replayed) age
 
 Threat model:
 
-- The agent is a replay script. It runs no model and has no network or credentials.
+- The agent is a replay script. It runs no model, holds no credentials and makes no network requests. Outbound access from the container is not restricted in this local setup; an egress allowlist comes with the hosted deployment.
 - The container is read-only, non-root, capability-free and resource-limited. Managed policy disables cookie import, webhook tasks and telemetry and allows only the ACP registry driver.
 - Demo data lives in the `demo-home` volume and holds only fixture repos. Reset discards everything else.
 
