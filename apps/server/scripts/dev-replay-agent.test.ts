@@ -1,12 +1,20 @@
 // @effect-diagnostics nodeBuiltinImport:off
 import * as NodeChildProcess from "node:child_process";
 import * as NodeFS from "node:fs";
+import * as NodeOS from "node:os";
+import * as NodePath from "node:path";
 import * as NodeReadline from "node:readline";
 import * as NodeURL from "node:url";
 
 import { describe, expect, it } from "@effect/vitest";
 
-import { parseReplayTurns, SCENARIOS, streamChunks } from "./dev-replay-agent.ts";
+import {
+  diffWrites,
+  parseAgentArgs,
+  parseReplayTurns,
+  SCENARIOS,
+  streamChunks,
+} from "./dev-replay-agent.ts";
 
 interface AgentMessage {
   readonly id?: number;
@@ -29,10 +37,11 @@ interface AgentMessage {
 async function talkToAgent(
   requests: ReadonlyArray<(sessionId: string) => object>,
   permissionResult: object = { outcome: { outcome: "selected", optionId: "allow-once" } },
+  args: ReadonlyArray<string> = [],
 ) {
   const agent = NodeChildProcess.spawn(
     process.execPath,
-    [NodeURL.fileURLToPath(new URL("./dev-replay-agent.ts", import.meta.url))],
+    [NodeURL.fileURLToPath(new URL("./dev-replay-agent.ts", import.meta.url)), ...args],
     { stdio: ["pipe", "pipe", "inherit"] },
   );
   const lines = NodeReadline.createInterface({ input: agent.stdout })[Symbol.asyncIterator]();
@@ -61,7 +70,141 @@ async function talkToAgent(
   return { sessionId, received };
 }
 
+const MATH_OLD = "export const sum = (a: number, b: number) => a + b;\n";
+const MATH_NEW = `${MATH_OLD}export const double = (a: number) => a * 2;\n`;
+
+const frame = (type: string, body: object) => JSON.stringify({ type, frame: body });
+const update = (body: object) =>
+  frame("emit_inbound", {
+    kind: "notification",
+    method: "session/update",
+    params: { sessionId: "s", update: body },
+  });
+const editDiff = [
+  { type: "diff", path: "<workspace>/src/math.ts", oldText: MATH_OLD, newText: MATH_NEW },
+];
+const approvalTranscript = [
+  frame("expect_outbound", { kind: "request", method: "session/prompt", params: "<any>" }),
+  update({ sessionUpdate: "tool_call", toolCallId: "e", kind: "edit", content: editDiff }),
+  frame("emit_inbound", {
+    kind: "request",
+    method: "session/request_permission",
+    params: {
+      sessionId: "s",
+      toolCall: { toolCallId: "e", kind: "edit", title: "Edit" },
+      options: [
+        { optionId: "allow-once", name: "Yes", kind: "allow_once" },
+        { optionId: "reject-once", name: "No", kind: "reject_once" },
+      ],
+    },
+  }),
+  update({
+    sessionUpdate: "tool_call_update",
+    toolCallId: "e",
+    status: "completed",
+    content: editDiff,
+  }),
+  frame("emit_inbound", {
+    kind: "response",
+    method: "session/prompt",
+    result: { stopReason: "end_turn" },
+  }),
+].join("\n");
+
+function seedWorkspace(transcript?: string) {
+  const dir = NodeFS.mkdtempSync(NodePath.join(NodeOS.tmpdir(), "replay-agent-"));
+  NodeFS.mkdirSync(NodePath.join(dir, "src"));
+  NodeFS.writeFileSync(NodePath.join(dir, "src", "math.ts"), MATH_OLD);
+  const scenarios = transcript === undefined ? undefined : NodePath.join(dir, "scenarios.json");
+  if (scenarios !== undefined && transcript !== undefined) {
+    NodeFS.writeFileSync(NodePath.join(dir, "t.ndjson"), transcript);
+    NodeFS.writeFileSync(scenarios, JSON.stringify([{ id: "t", name: "T", file: "./t.ndjson" }]));
+  }
+  return {
+    dir,
+    scenarios,
+    read: () => NodeFS.readFileSync(NodePath.join(dir, "src", "math.ts"), "utf8"),
+  };
+}
+
+const newSessionAndPrompts = (dir: string, prompts: number) => [
+  () => ({ method: "session/new", params: { cwd: dir } }),
+  ...Array.from({ length: prompts }, () => (sessionId: string) => ({
+    method: "session/prompt",
+    params: { sessionId },
+  })),
+];
+
 describe("dev replay agent", () => {
+  it("keeps the built-in scenarios when no flags are given", () => {
+    const args = parseAgentArgs([]);
+    expect(args.scenarios.map((s) => s.id)).toEqual(SCENARIOS.map((s) => s.id));
+    expect(args.applyDiffs).toBe(false);
+  });
+
+  it("loads scenarios from a JSON file relative to it", () => {
+    const { dir } = seedWorkspace("");
+    const file = NodePath.join(dir, "scenarios.json");
+    NodeFS.writeFileSync(file, JSON.stringify([{ id: "x", name: "X", file: "./x.ndjson" }]));
+    const { scenarios } = parseAgentArgs(["--scenarios", file, "--apply-diffs"]);
+    expect(scenarios).toHaveLength(1);
+    expect(scenarios[0]!.file.href).toBe(
+      NodeURL.pathToFileURL(NodePath.join(dir, "x.ndjson")).href,
+    );
+  });
+
+  it("writes only completed in-workspace diffs", () => {
+    const update = (status: string) => ({
+      sessionUpdate: "tool_call_update",
+      status,
+      content: [
+        { type: "diff", path: "/w/src/a.ts", newText: "A" },
+        { type: "diff", path: "/w/../etc/x", newText: "X" },
+        { type: "content", content: { type: "text", text: "ignored" } },
+      ],
+    });
+    expect(diffWrites(update("completed"), "/w")).toEqual([{ path: "/w/src/a.ts", text: "A" }]);
+    expect(diffWrites(update("pending"), "/w")).toEqual([]);
+  });
+
+  it("applies the showcase edit to disk only with --apply-diffs", async () => {
+    const showcase = NodeFS.readFileSync(
+      new URL("./dev-replay/showcase_transcript.ndjson", import.meta.url),
+      "utf8",
+    );
+    const diff = (
+      JSON.parse(showcase.split("\n")[8]!) as {
+        frame: { params: { update: { content: Array<{ oldText: string; newText: string }> } } };
+      }
+    ).frame.params.update.content[0]!;
+    const apply = seedWorkspace();
+    NodeFS.writeFileSync(NodePath.join(apply.dir, "src", "math.ts"), diff.oldText);
+    await talkToAgent(newSessionAndPrompts(apply.dir, 1), undefined, ["--apply-diffs"]);
+    expect(apply.read()).toBe(diff.newText);
+    await talkToAgent(newSessionAndPrompts(apply.dir, 2), undefined, ["--apply-diffs"]);
+    expect(apply.read()).toBe(diff.newText);
+
+    const plain = seedWorkspace();
+    NodeFS.writeFileSync(NodePath.join(plain.dir, "src", "math.ts"), diff.oldText);
+    await talkToAgent(newSessionAndPrompts(plain.dir, 1));
+    expect(plain.read()).toBe(diff.oldText);
+  });
+
+  it("writes the edit only when the approval is allowed", async () => {
+    const rejected = seedWorkspace(approvalTranscript);
+    const flags = (scenarios: string) => ["--apply-diffs", "--scenarios", scenarios];
+    await talkToAgent(
+      newSessionAndPrompts(rejected.dir, 1),
+      { outcome: { outcome: "selected", optionId: "reject-once" } },
+      flags(rejected.scenarios!),
+    );
+    expect(rejected.read()).toBe(MATH_OLD);
+
+    const allowed = seedWorkspace(approvalTranscript);
+    await talkToAgent(newSessionAndPrompts(allowed.dir, 1), undefined, flags(allowed.scenarios!));
+    expect(allowed.read()).toBe(MATH_NEW);
+  });
+
   it("keeps sessions and tool ids unique across processes and reloads", async () => {
     const prompt = (sessionId: string) => ({ method: "session/prompt", params: { sessionId } });
     const selectTodoList = (sessionId: string) => ({
@@ -90,7 +233,7 @@ describe("dev replay agent", () => {
   });
 
   it.each(SCENARIOS)("$id plays a turn without session setup frames", ({ file }) => {
-    const turns = parseReplayTurns(NodeFS.readFileSync(new URL(file, import.meta.url), "utf8"));
+    const turns = parseReplayTurns(NodeFS.readFileSync(file, "utf8"));
     expect(turns.length).toBeGreaterThan(0);
     const updates = turns.flatMap((turn) =>
       turn.frames.flatMap(({ frame }) =>
@@ -104,9 +247,7 @@ describe("dev replay agent", () => {
   });
 
   it("keeps permission requests and the recorded stop reason in order", () => {
-    const turns = parseReplayTurns(
-      NodeFS.readFileSync(new URL(SCENARIOS[0].file, import.meta.url), "utf8"),
-    );
+    const turns = parseReplayTurns(NodeFS.readFileSync(SCENARIOS[0]!.file, "utf8"));
     const methods = turns[0]!.frames.map(({ frame }) => frame.method);
     expect(methods).toContain("session/request_permission");
     expect(turns[0]!.stopReason).toBe("end_turn");

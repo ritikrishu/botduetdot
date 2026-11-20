@@ -106,6 +106,7 @@ Base release: `v0.1.9`. These are all pre-existing files changed by the fork sin
 | `apps/mobile/app.config.ts`                                    | Support Personal Team signing, matching keychain identity, no Associated Domains, and OTA off by default. |
 | `apps/mobile/app.config.test.ts`                               | Cover variants, Personal Team signing, bundle identity, entitlements and OTA opt-in.                      |
 | `apps/mobile/README.md`                                        | Document Personal Team signing and a preview Release install beside the store app.                        |
+| `apps/server/scripts/dev-replay-agent.ts`                      | `--scenarios`/`--apply-diffs` for the review demo environment (`infra/demo`).                             |
 
 Spaces code is isolated under `packages/contracts/src/sidebarSpaces*`,
 `packages/client-runtime/src/state/sidebarSpaces*`, `apps/web/src/sidebarSpaces/`,

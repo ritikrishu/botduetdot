@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 // @effect-diagnostics nodeBuiltinImport:off globalTimers:off
 /**
- * A free ACP agent for dev servers. It plays recorded ACP transcripts with simulated
- * streaming, so the real adapter, orchestration, and UI run without a paid model.
- * Each scenario is a "model"; each prompt plays the next recorded turn.
- * Unlike acp-replay-agent.ts, it does not assert the client's frames.
+ * A free ACP agent for dev servers: plays recorded transcripts with simulated streaming, one
+ * scenario per "model", one turn per prompt. It does not assert the client's frames.
+ * Flags let a demo server supply its own recordings and apply edits.
  */
 import * as NodeCrypto from "node:crypto";
 import * as NodeFS from "node:fs";
+import * as NodePath from "node:path";
 import * as NodeReadline from "node:readline";
+import * as NodeURL from "node:url";
 
 interface LogicalFrame {
   readonly kind: "notification" | "request" | "response";
@@ -42,29 +43,87 @@ const FIXTURES = "../src/orchestration-v2/testkit/fixtures";
 
 // Recorded fixtures the replay tests already pin, plus a hand-written UI showcase.
 // Use acpRegistry transcripts: vendor transcripts carry state in frames this agent drops.
-export const SCENARIOS = [
-  { id: "showcase", name: "Showcase", file: "./dev-replay/showcase_transcript.ndjson" },
+export interface ReplayScenario {
+  readonly id: string;
+  readonly name: string;
+  readonly file: URL;
+}
+
+export const SCENARIOS: ReadonlyArray<ReplayScenario> = [
+  {
+    id: "showcase",
+    name: "Showcase",
+    file: new URL("./dev-replay/showcase_transcript.ndjson", import.meta.url),
+  },
   {
     id: "todo-list",
     name: "Plan and reads",
-    file: `${FIXTURES}/todo_list/registry_transcript.ndjson`,
+    file: new URL(`${FIXTURES}/todo_list/registry_transcript.ndjson`, import.meta.url),
   },
   {
     id: "approval",
     name: "Write approval",
-    file: `${FIXTURES}/tool_call_read_only_on_request/registry_transcript.ndjson`,
+    file: new URL(
+      `${FIXTURES}/tool_call_read_only_on_request/registry_transcript.ndjson`,
+      import.meta.url,
+    ),
   },
   {
     id: "question",
     name: "Question",
-    file: `${FIXTURES}/acp_elicitation/registry_transcript.ndjson`,
+    file: new URL(`${FIXTURES}/acp_elicitation/registry_transcript.ndjson`, import.meta.url),
   },
   {
     id: "multi-turn",
     name: "Multi turn",
-    file: `${FIXTURES}/multi_turn/registry_transcript.ndjson`,
+    file: new URL(`${FIXTURES}/multi_turn/registry_transcript.ndjson`, import.meta.url),
   },
-] as const;
+];
+
+export interface AgentOptions {
+  readonly scenarios: ReadonlyArray<ReplayScenario>;
+  readonly applyDiffs: boolean;
+}
+
+export function parseAgentArgs(argv: ReadonlyArray<string>): AgentOptions {
+  const flag = argv.indexOf("--scenarios");
+  const applyDiffs = argv.includes("--apply-diffs");
+  const path = flag === -1 ? undefined : argv[flag + 1];
+  if (flag !== -1 && path === undefined) throw new Error("--scenarios needs a JSON file path");
+  if (path === undefined) return { scenarios: SCENARIOS, applyDiffs };
+  const listing = NodePath.resolve(path);
+  const entries = JSON.parse(NodeFS.readFileSync(listing, "utf8")) as ReadonlyArray<{
+    id: string;
+    name: string;
+    file: string;
+  }>;
+  const base = NodeURL.pathToFileURL(listing);
+  return {
+    scenarios: entries.map(({ id, name, file }) => ({ id, name, file: new URL(file, base) })),
+    applyDiffs,
+  };
+}
+
+/** The files a completed tool call wrote, limited to paths inside the workspace. */
+export function diffWrites(
+  update: unknown,
+  workspace: string,
+): ReadonlyArray<{ readonly path: string; readonly text: string }> {
+  const { sessionUpdate, status, content } = (update ?? {}) as {
+    sessionUpdate?: unknown;
+    status?: unknown;
+    content?: unknown;
+  };
+  if (sessionUpdate !== "tool_call_update" || status !== "completed") return [];
+  if (!Array.isArray(content)) return [];
+  return content.flatMap((entry: { type?: unknown; path?: unknown; newText?: unknown }) => {
+    if (entry?.type !== "diff" || typeof entry.path !== "string") return [];
+    if (typeof entry.newText !== "string") return [];
+    const relative = NodePath.relative(workspace, NodePath.resolve(entry.path));
+    if (relative.startsWith("..") || NodePath.isAbsolute(relative)) return [];
+    return [{ path: entry.path, text: entry.newText }];
+  });
+}
 
 // Session setup and vendor state stay out: they would replace the replay agent's own models.
 const REPLAYED_UPDATES = new Set([
@@ -171,15 +230,14 @@ function permissionRejectedToolCallId(request: LogicalFrame, answer: unknown): s
   return rejected ? params.toolCall?.toolCallId : undefined;
 }
 
-function runAgent(): void {
+function runAgent(options: AgentOptions): void {
   const turnsByScenario = new Map<string, ReadonlyArray<ReplayTurn>>();
   const loadTurns = (scenarioId: string) => {
     const cached = turnsByScenario.get(scenarioId);
     if (cached !== undefined) return cached;
-    const scenario = SCENARIOS.find((candidate) => candidate.id === scenarioId) ?? SCENARIOS[0];
-    const turns = parseReplayTurns(
-      NodeFS.readFileSync(new URL(scenario.file, import.meta.url), "utf8"),
-    );
+    const scenario =
+      options.scenarios.find((candidate) => candidate.id === scenarioId) ?? options.scenarios[0]!;
+    const turns = parseReplayTurns(NodeFS.readFileSync(scenario.file, "utf8"));
     turnsByScenario.set(scenarioId, turns);
     return turns;
   };
@@ -267,6 +325,12 @@ function runAgent(): void {
               ? params
               : { ...params, update: { ...params.update, content: { ...content, text: chunk } } },
         });
+        if (options.applyDiffs && index === chunks.length - 1) {
+          for (const write of diffWrites(params.update, session.cwd)) {
+            NodeFS.mkdirSync(NodePath.dirname(write.path), { recursive: true });
+            NodeFS.writeFileSync(write.path, write.text);
+          }
+        }
       }
     }
   };
@@ -291,12 +355,17 @@ function runAgent(): void {
         const sessionId =
           message.method === "session/load" ? String(params.sessionId) : NodeCrypto.randomUUID();
         const cwd = typeof params.cwd === "string" ? params.cwd : process.cwd();
-        sessions.set(sessionId, { cwd, model: SCENARIOS[0].id, promptCount: 0, cancel: undefined });
+        sessions.set(sessionId, {
+          cwd,
+          model: options.scenarios[0]!.id,
+          promptCount: 0,
+          cancel: undefined,
+        });
         return {
           ...(message.method === "session/new" ? { sessionId } : {}),
           models: {
-            currentModelId: SCENARIOS[0].id,
-            availableModels: SCENARIOS.map((scenario) => ({
+            currentModelId: options.scenarios[0]!.id,
+            availableModels: options.scenarios.map((scenario) => ({
               modelId: scenario.id,
               name: scenario.name,
             })),
@@ -305,7 +374,7 @@ function runAgent(): void {
       }
       case "session/set_model": {
         const session = sessions.get(String(params.sessionId));
-        if (!SCENARIOS.some((scenario) => scenario.id === params.modelId)) {
+        if (!options.scenarios.some((scenario) => scenario.id === params.modelId)) {
           throw Object.assign(new Error(`Unknown replay scenario ${String(params.modelId)}`), {
             code: -32602,
           });
@@ -381,4 +450,4 @@ function runAgent(): void {
   });
 }
 
-if (import.meta.main) runAgent();
+if (import.meta.main) runAgent(parseAgentArgs(process.argv.slice(2)));
