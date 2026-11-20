@@ -1,3 +1,5 @@
+import { CLI_COPY_SOURCE } from "../lib/brand-text.ts";
+
 export const RELEASE_IDENTITY = {
   name: "BotDuetDot",
   slug: "botduetdot",
@@ -59,6 +61,10 @@ export const FORBIDDEN_PATTERNS = [
   ],
   ["upstream-home", /["'`]\.t3["'`]|\/\.t3(?:\/|["'`\s]|$)|\$HOME\/\.t3\b/g],
 ] as const;
+
+// Upstream CLI copy (`t3 pair`) that the bundle-time rewrite missed. JavaScript only: Hermes stores
+// strings back to back, so a trailing "t3" beside a string starting " pair" is not copy (r10).
+export const JS_FORBIDDEN_PATTERNS = [["upstream-cli", new RegExp(CLI_COPY_SOURCE, "g")]] as const;
 
 export interface CountedExemption {
   readonly scope: RegExp;

@@ -49,6 +49,8 @@ The working contract that drove the standalone build is in git history
 - **r11:** the MIT credit appears twice in Android (the preview WebView reads `BRAND`). Native strings
   come from resources the standalone plugin overrides, the gate scans `base/dex` and `base/lib`,
   `npx t3@` and "T3 home" are gated, and the managed-policy path comes from the brand.
+- **r12:** the rewrite also covers unquoted `t3 <subcommand>` copy (JSX text, labels, CLI help) but
+  never `npx t3 …`; the JS gate fails on any `t3 <subcommand>` it left behind (`upstream-cli`).
 
 ## Design decisions and known limits
 
@@ -115,8 +117,8 @@ and `apps/mobile/src/features/home/spaces/`, with tests beside it and
 ### Standalone seams
 
 Derived from `git diff --stat v0.1.9..HEAD`, excluding new files; unabridged names come from
-`git diff --name-only --diff-filter=MDRT v0.1.9..HEAD`. Cross-checked against the working contract's seams S1–S57 and the decision log below (r3–r11).
-Standalone builds also rewrite "T3 Code" and quoted `t3` CLI copy at bundle time
+`git diff --name-only --diff-filter=MDRT v0.1.9..HEAD`. Cross-checked against the working contract's seams S1–S57 and the decision log below (r3–r12).
+Standalone builds also rewrite "T3 Code" and `t3` CLI copy at bundle time
 (`scripts/lib/brand-text.ts`), so most upstream copy needs no seam. The Spaces table above remains
 part of this inventory. Refresh both tables after integration and each upgrade.
 
@@ -149,6 +151,8 @@ part of this inventory. Refresh both tables after integration and each upgrade.
 | `apps/mobile/src/features/layout/workspace/PullRequestToolbar.android.tsx`                                             | S33: Use standalone mobile name and assets.                                                                                                                             |
 | `apps/mobile/src/features/layout/workspace/WorkspaceListHeader.android.tsx`                                            | S33: Use standalone mobile name and assets.                                                                                                                             |
 | `apps/mobile/src/features/layout/workspace/WorkspaceRootScreen.tsx`                                                    | T5b: accessibility label uses `BRAND_NAME`                                                                                                                              |
+| `apps/mobile/src/features/pull-requests/PullRequestReviewersScreen.tsx`                                                | Backport of upstream #34513 (`LegendList`, not `FlatList`); take upstream's version on the next sync                                                                    |
+| `apps/mobile/src/features/review/ReviewSheet.tsx`                                                                      | Same #34513 backport: a React Compiler-built `NativeScrollView` breaks `FlatList` (Invalid hook call)                                                                   |
 | `apps/mobile/src/features/settings/lib/legal-document-url.ts`                                                          | S31: `BRAND.links.marketingSite`                                                                                                                                        |
 | `apps/mobile/src/features/threads/thread-work-log.tsx`                                                                 | T5b: standalone work-log icon uses the brand mark                                                                                                                       |
 | `apps/mobile/src/lib/appLinking.ts`                                                                                    | Bare-scheme launch filter matches `brandAppSchemes(BRAND)` in standalone                                                                                                |

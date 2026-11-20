@@ -84,13 +84,18 @@ describe("artifact leak rules", () => {
     String.raw`"t3code:\/\/pair"`,
     'const host = "t3" + "." + "codes";',
     'const scheme = "t3" + "code"; const url = `${scheme}://pair`;',
+    'children:"Scan the code from t3 pair or desktop Connections settings"',
+    '{command:"t3 connect link"}',
+    'label:"t3 thread cli"',
   ])("rejects %s", (text) => {
     expect(scanText(js(text), []).length).toBeGreaterThan(0);
   });
   it("keeps internal namespaces and preview partitions", () => {
     expect(
       scanText(
-        js('"t3code:theme"; "t3code-preview-session"; "--t3code-preview-passkey-bridge"'),
+        js(
+          '"t3code:theme"; "t3code-preview-session"; "--t3code-preview-passkey-bridge"; "npx t3 triage"; "botduetdot pair"; "t3 checkpoint"; var t3 = up; "@t3tools/t3 update"',
+        ),
         [],
       ),
     ).toEqual([]);
