@@ -55,11 +55,11 @@ function createRepo(name: keyof typeof DEMO_REPOS) {
   return dir;
 }
 
-function cli(args: ReadonlyArray<string>, allowExit: ReadonlyArray<number> = [0]) {
+function cli(args: ReadonlyArray<string>) {
   const result = NodeChildProcess.spawnSync("node", [server, ...args, "--base-dir", out], {
     encoding: "utf8",
   });
-  if (!allowExit.includes(result.status ?? -1)) {
+  if (result.status !== 0) {
     throw new Error(
       `t3 ${args.join(" ")} exited ${result.status}\n${result.stdout}${result.stderr}`,
     );
@@ -137,30 +137,25 @@ const stopped = new Promise<void>((resolve) => {
 try {
   await waitForServer(port, () => exited);
   for (const thread of DEMO_THREADS) {
-    const allowed = thread.model === "question" ? [0, 2] : [0];
     const [first = "Start", ...rest] = thread.messages;
-    const started = cli(
-      [
-        "thread",
-        "start",
-        workspaces[thread.repo]!,
-        first,
-        "--title",
-        thread.title,
-        "--provider",
-        "demo",
-        "--model",
-        thread.model,
-        "--wait",
-        "--json",
-      ],
-      allowed,
-    );
+    const started = cli([
+      "thread",
+      "start",
+      workspaces[thread.repo]!,
+      first,
+      "--title",
+      thread.title,
+      "--provider",
+      "demo",
+      "--model",
+      thread.model,
+      "--wait",
+      "--json",
+    ]);
     const { threadId } = JSON.parse(
       started.stdout.split("\n").findLast((line) => line.startsWith("{")) ?? "",
     ) as { threadId: string };
-    for (const message of rest)
-      cli(["thread", "send", threadId, message, "--wait", "--json"], allowed);
+    for (const message of rest) cli(["thread", "send", threadId, message, "--wait", "--json"]);
   }
 } finally {
   if (!exited) {

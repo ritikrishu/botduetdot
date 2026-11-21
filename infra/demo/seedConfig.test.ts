@@ -27,8 +27,8 @@ describe("seedConfig", () => {
         { projectId: "p3", title: "pixel-garden" },
       ]),
     ).toEqual([
-      { id: "work", name: "Work", icon: "briefcase", projectRefs: ["env1:p1", "env1:p2"] },
-      { id: "side", name: "Side projects", icon: "sparkles", projectRefs: ["env1:p3"] },
+      { id: "work", name: "Work", icon: "💼", projectRefs: ["env1:p1", "env1:p2"] },
+      { id: "side", name: "Side projects", icon: "🚀", projectRefs: ["env1:p3"] },
     ]);
   });
 

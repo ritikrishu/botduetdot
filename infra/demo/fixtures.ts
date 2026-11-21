@@ -102,7 +102,7 @@ export function tick(garden: Cell[][]): Cell[][] {
 export const DEMO_THREADS: ReadonlyArray<{
   repo: keyof typeof DEMO_REPOS;
   title: string;
-  model: "code-change" | "question";
+  model: "code-change";
   messages: ReadonlyArray<string>;
 }> = [
   {
@@ -114,15 +114,9 @@ export const DEMO_THREADS: ReadonlyArray<{
       "Looks good. Can you double check the rounding?",
     ],
   },
-  {
-    repo: "acme-weather",
-    title: "Choose forecast units",
-    model: "question",
-    messages: ["Which units should the forecast show?"],
-  },
 ];
 
 export const DEMO_SPACES = [
-  { id: "work", name: "Work", icon: "briefcase", repos: ["acme-weather", "notes-cli"] },
-  { id: "side", name: "Side projects", icon: "sparkles", repos: ["pixel-garden"] },
+  { id: "work", name: "Work", icon: "💼", repos: ["acme-weather", "notes-cli"] },
+  { id: "side", name: "Side projects", icon: "🚀", repos: ["pixel-garden"] },
 ] as const;
