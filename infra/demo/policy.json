@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "organization": "BotDuetDot Demo",
+  "limits": {
+    "providers": { "allowedDrivers": ["acpRegistry"] },
+    "browserCookieImport": false,
+    "webhookTasks": false,
+    "telemetry": false
+  }
+}

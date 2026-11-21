@@ -33,24 +33,26 @@ personal paths, and avoid screens with residual T3 copy or marks. Show only avai
 
 ## App access: complete before review
 
-Declare that core functionality requires server pairing. There is no BotDuetDot login.
-**OWNER DECISION:** provide a reachable isolated demo server with repeatable pairing access,
-or supply a demo video and ask Play whether it is sufficient. A video alone does not guarantee review
-access. Do not supply an expired/consumed one-time token, localhost URL or unreachable private LAN
-address. Document any Tailscale access setup required.
+Declare that core functionality requires a connection to a server. Reviewer access is planned through
+BotDuetDot Connect (not built yet), so production review waits until Connect exists. There are no
+single-use pairing codes. **OWNER DECISION** until then: a demo video alone does not guarantee review
+access, so do not submit for production before Connect works.
 
-Complete these reviewer instructions with actual access details in Console:
+The demo environment (`infra/demo`) runs a scripted agent: no model, no subscription, fictional data.
+Reviewers need nothing paid. Console text, with real values filled in only in Console:
 
-1. Open BotDuetDot → **Add environment**. Paste the supplied pairing URL or scan its QR inside the app.
-   Supply a working procedure to pair again throughout review.
-2. Open the seeded demo project and thread. Read its conversation and inspect sample code changes.
-3. Switch between the supplied Spaces. Send a harmless prompt and respond to an approval request.
-   Supply working provider access on the demo server so reviewers need no paid subscription.
-4. Disconnect and repeat pairing to verify the supplied procedure.
+1. Open BotDuetDot and sign in with the demo account: `<demo email>` / `<password>`.
+2. Connect to the linked demo environment shown in the list.
+3. Open a seeded project and thread, read the conversation and inspect the code changes.
+4. Switch between the Spaces "Work" and "Side projects".
+5. Start a thread with "Approval demo" and approve or deny the request; try "Question demo" too.
+6. Sign out and repeat to verify access.
+7. To test account deletion, create your own account first; do not delete the shared demo account.
 
-Keep the demo server available throughout review with fictional data, isolated repositories and
-limited credentials. Record the same flow in the video. Put network requirements, access details
-and a monitored contact in Console; never commit pairing secrets here.
+The demo account must sign in with email and password alone: no MFA and no email or new-device
+verification codes, because reviewers cannot receive them. Keep the demo server available throughout
+review, and put network requirements and a contact reviewers can write to (`<monitored email>`) in Console. Never commit
+credentials here.
 
 Complete [Data safety](data-safety.md), ads (no), audience (proposed 18+), content rating and
 AI-content declarations against the release. Check guest-sharing and AI-content reporting requirements;

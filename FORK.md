@@ -56,6 +56,23 @@ The working contract that drove the standalone build is in git history
   text, is unreviewed. Standalone Android widgets drop their embedded layout, which expo-widgets
   bundles outside the rewrite, and the AAB gate scans `base/res/raw`.
 
+### Demo environment decisions
+
+The Play review demo server lives in `infra/demo` (fork-only). The only upstream file it touches is
+`apps/server/scripts/dev-replay-agent.ts`.
+
+- **d1:** Connect first, then submit for production. Reviewers sign in with a demo account instead of
+  using single-use pairing codes. Host choice (VPS or Mac Studio VM) is deferred; never an existing
+  Hetzner machine. Until Connect exists, run it locally ([`infra/demo/README.md`](infra/demo/README.md)).
+- **d2:** the agent is a scripted Replay recording, not a capped real model: no subscription, no
+  spend, no network, fictional data.
+- **d3:** under a managed policy, `limits.maxRuntimeMode` makes provider launch config
+  administrator-owned, so a `settings.json` `acpRegistry` command is ignored ("Local ACP provider
+  requires an executable"). The demo policy sets no ceiling and uses
+  `defaultRuntimeMode: "approval-required"` in settings so the approval demo asks.
+- **d4:** standalone reads its managed policy from `/etc/botduetdot/policy.json`, not `/etc/t3code`.
+- **d5:** the demo host port is 3780; 3773 collides with a real BotDuetDot server on the same host.
+
 ## Design decisions and known limits
 
 Server settings are the only existing store every client receives; client settings are local
@@ -112,6 +129,7 @@ Base release: `v0.1.9`. These are all pre-existing files changed by the fork sin
 | `apps/mobile/app.config.ts`                                    | Support Personal Team signing, matching keychain identity, no Associated Domains, and OTA off by default. |
 | `apps/mobile/app.config.test.ts`                               | Cover variants, Personal Team signing, bundle identity, entitlements and OTA opt-in.                      |
 | `apps/mobile/README.md`                                        | Document Personal Team signing and a preview Release install beside the store app.                        |
+| `apps/server/scripts/dev-replay-agent.ts`                      | `--scenarios`/`--apply-diffs` for the review demo environment (`infra/demo`).                             |
 
 Spaces code is isolated under `packages/contracts/src/sidebarSpaces*`,
 `packages/client-runtime/src/state/sidebarSpaces*`, `apps/web/src/sidebarSpaces/`,

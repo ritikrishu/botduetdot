@@ -152,6 +152,10 @@
         "src/preload.mjs",
       ],
     },
+    "infra/demo": {
+      // A CLI run with node, not imported.
+      "entry": ["seed.ts"],
+    },
     "infra/relay": {
       // Alchemy loads src/worker.ts as the Worker entry and reads its default export.
       "entry": ["alchemy.run.ts!", "src/persistence/schema.ts!", "src/worker.ts!"],

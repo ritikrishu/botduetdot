@@ -188,6 +188,10 @@ channels of supported AI tools (for example `downloads.claude.ai` and `api.meta.
 updates; Settings → Maintenance → Provider update checks turns the latter off. It never contacts
 `*.t3.codes`, Expo, npm or the upstream GitHub owner.
 
+Release builds do not prefill from a `botduetdot://pair` link (`__DEV__`-only,
+`apps/mobile/src/features/connection/ConnectionsNewRouteScreen.tsx:47`), so give reviewers and testers
+the address and pairing code to type in.
+
 ## Publish and promote
 
 The desktop wrapper's `--publish` run (above) verifies hashes and uploads the five checked files to
